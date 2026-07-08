@@ -184,7 +184,8 @@ async function callGemini(userPrompt, systemPrompt) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY absente');
   
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+  // Remplacement du modèle obsolète par le modèle actif gemini-2.5-flash
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
   
   const r = await fetch(url, {
     method: 'POST',
@@ -196,7 +197,6 @@ async function callGemini(userPrompt, systemPrompt) {
     }),
   });
 
-  // Extraction chirurgicale du vrai message d'erreur de Google si HTTP 400
   if (!r.ok) {
     const rawError = await r.text().catch(() => 'Impossible de lire le corps de la réponse');
     throw new Error(`Gemini HTTP ${r.status} - Détails : ${rawError}`);
