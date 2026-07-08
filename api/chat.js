@@ -183,7 +183,10 @@ async function callMistral(userPrompt, systemPrompt) {
 async function callGemini(userPrompt, systemPrompt) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY absente');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+  
+  // Ligne mise à jour chirurgicalement vers le modèle actif gemini-2.0-flash pour éviter l'erreur 404
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+  
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
