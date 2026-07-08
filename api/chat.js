@@ -133,7 +133,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ text, provider: 'gemini' });
     } catch (err) {
       console.warn('[chat] duel Gemini KO :', err.message);
-      return res.status(502).json({ error: 'Gemini indisponible', provider: 'gemini' });
+      return res.status(502).json({ error: err.message, provider: 'gemini' });
     }
   }
 
@@ -184,8 +184,7 @@ async function callGemini(userPrompt, systemPrompt) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY absente');
   
-  // URL mise à jour sur le endpoint de production stable v1 pour le compte payant Niveau 1
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${key}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
   
   const r = await fetch(url, {
     method: 'POST',
@@ -196,7 +195,13 @@ async function callGemini(userPrompt, systemPrompt) {
       generationConfig: { maxOutputTokens: 600, temperature: 0.6 },
     }),
   });
-  if (!r.ok) throw new Error(`Gemini HTTP ${r.status}`);
+
+  // Extraction chirurgicale du vrai message d'erreur de Google si HTTP 400
+  if (!r.ok) {
+    const rawError = await r.text().catch(() => 'Impossible de lire le corps de la réponse');
+    throw new Error(`Gemini HTTP ${r.status} - Détails : ${rawError}`);
+  }
+
   const data = await r.json();
   const text = (data?.candidates?.[0]?.content?.parts || [])
     .map((p) => p.text || '')
