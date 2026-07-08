@@ -184,8 +184,8 @@ async function callGemini(userPrompt, systemPrompt) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY absente');
   
-  // Ligne mise à jour chirurgicalement vers le modèle actif gemini-2.0-flash pour éviter l'erreur 404
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+  // URL mise à jour sur le endpoint de production stable v1 pour le compte payant Niveau 1
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${key}`;
   
   const r = await fetch(url, {
     method: 'POST',
