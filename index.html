@@ -1514,13 +1514,17 @@ $('#capBack').onclick=()=>{ stopChrono(); $('#capsuleView').classList.remove('op
 
 /* --- Simulation de réponse IA (effet machine à écrire) --- */
 function typewrite(t, text){
-  t.parentElement.classList.add('cursor-blink');
-  if(reduce){ t.textContent=text; t.parentElement.classList.remove('cursor-blink'); return; }
-  let i=0; const speed=12;
-  (function type(){
-    if(i<=text.length){ t.textContent=text.slice(0,i); i+=2; setTimeout(type,speed); }
-    else t.parentElement.classList.remove('cursor-blink');
-  })();
+  /* Renvoie une promesse resolue a la FIN de la frappe : les verrous de
+     boutons tiennent tant que le texte s'affiche. */
+  return new Promise(done=>{
+    t.parentElement.classList.add('cursor-blink');
+    if(reduce){ t.textContent=text; t.parentElement.classList.remove('cursor-blink'); done(); return; }
+    let i=0; const speed=12;
+    (function type(){
+      if(i<=text.length){ t.textContent=text.slice(0,i); i+=2; setTimeout(type,speed); }
+      else { t.parentElement.classList.remove('cursor-blink'); done(); }
+    })();
+  });
 }
 /* --- Moteur de jeux (validation organique : la réussite tamponne toute seule) --- */
 function gameMsg(txt, ok){
@@ -1885,7 +1889,7 @@ async function duelAnswer(c){
   A.scrollIntoView({behavior:'smooth',block:'nearest'});
   const showObs=()=>{ const o=$('.duel-obs'); if(o) o.classList.add('show'); };
   if(CONFIG.DEMO){
-    typewrite(At, c.sim); typewrite(Bt, c.sim2 || c.sim);
+    await Promise.all([typewrite(At, c.sim), typewrite(Bt, c.sim2 || c.sim)]);
     saveTrace(c.id,{m:'duel',q:prompt,a:String(c.sim||'').slice(0,6000),b:String(c.sim2||c.sim||'').slice(0,6000)});
     enableValidate(); showObs(); trackEvent('duel', c.id); return;
   }
@@ -1896,7 +1900,7 @@ async function duelAnswer(c){
   const [ra,rb]=await Promise.allSettled([call('mistral'),call('gemini')]);
   const ta = ra.status==='fulfilled' ? (ra.value.text||'(vide)') : (c.sim  || 'Mistral fait la sieste - réessaie.');
   const tb = rb.status==='fulfilled' ? (rb.value.text||'(vide)') : (c.sim2 || 'Gemini fait la sieste - réessaie.');
-  typewrite(At, ta); typewrite(Bt, tb);
+  await Promise.all([typewrite(At, ta), typewrite(Bt, tb)]);
   saveTrace(c.id,{m:'duel',q:prompt,a:ta.slice(0,6000),b:tb.slice(0,6000)});
   enableValidate(); showObs(); trackEvent('duel', c.id);
   } finally { unlockAsk(); }
@@ -1920,14 +1924,14 @@ async function simAnswer(c){
       if(!r.ok) throw new Error('HTTP '+r.status);
       const d=await r.json();
       const txt=d.text || '(réponse vide)';
-      typewrite(t, txt);
+      await typewrite(t, txt);
       saveTrace(c.id,{m:'prompt',q:used,a:txt.slice(0,6000),p:d.provider||''});
       enableValidate();
       trackEvent('prompt', c.id);
       return;
     }catch(e){ console.warn('API /api/chat indisponible → réponse démo', e); }
   }
-  typewrite(t, c.sim);
+  await typewrite(t, c.sim);
   saveTrace(c.id,{m:'prompt',q:used,a:String(c.sim||'').slice(0,6000),p:'demo'});
   enableValidate();
   } finally { unlockAsk(); }
