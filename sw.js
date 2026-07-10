@@ -6,7 +6,7 @@
  *  - /api/* : jamais en cache (LLM et sauvegarde exigent le réseau ;
  *    hors-ligne, le front bascule seul sur ses réponses de secours)
  */
-const VERSION = 'cv-ia-v3';
+const VERSION = 'cv-ia-v4';
 const SHELL = [
   '/',
   '/index.html',

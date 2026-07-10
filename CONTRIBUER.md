@@ -110,3 +110,24 @@ Votre `contexte_ia` doit donc seulement préciser, en 1-2 phrases :
 - [ ] relecture sur le site ~1 min après le commit (recharger la page)
 
 En cas de doute, cassez tout sans peur : `git` garde l'historique, un revert suffit.
+
+
+## Contribuer la pop-in « À propos »
+
+Tout se passe dans **`config.js`**, bloc `ABOUT` - zéro HTML à toucher :
+
+```js
+ABOUT: {
+  INTRO: "Le texte d'introduction du projet.",
+  TEAM: [
+    { nom: 'Prénom N.', role: 'Contenu des escales' },
+    { nom: 'Autre P.',  role: 'Relecture & tests' },
+  ],
+  MENTION: "La ligne technique/confiance affichée en bas.",
+},
+```
+
+Pour t'ajouter : une ligne `{ nom: '…', role: '…' }` dans `TEAM` (garde la
+virgule finale). L'avatar est généré automatiquement à partir de tes initiales,
+avec une couleur de la charte. `INTRO` et `MENTION` restent modifiables
+librement. Commit sur GitHub → visible sur le site en ~40 secondes.
