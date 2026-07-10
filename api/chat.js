@@ -147,12 +147,13 @@ module.exports = async (req, res) => {
     const text = await callMistral(userPrompt, systemPrompt);
     return res.status(200).json({ text, provider: 'mistral' });
   } catch (err) {
-    console.warn('[chat] Mistral indisponible → bascule Gemini :', err.message);
+    console.warn('[chat] MISTRAL KO → bascule Gemini :', err.message);
   }
 
   // --- Repli : Gemini Flash ---
   try {
     const text = await callGemini(userPrompt, systemPrompt);
+    console.warn('[chat] réponse servie par GEMINI (fallback Mistral)');
     return res.status(200).json({ text, provider: 'gemini' });
   } catch (err) {
     console.error('[chat] Gemini aussi en échec :', err.message);
@@ -165,11 +166,13 @@ module.exports = async (req, res) => {
 async function callMistral(userPrompt, systemPrompt) {
   const key = process.env.MISTRAL_API_KEY;
   if (!key) throw new Error('MISTRAL_API_KEY absente');
+  // Modèle surchargeable sans toucher au code (symétrique à GEMINI_MODEL)
+  const model = process.env.MISTRAL_MODEL || 'mistral-small-latest';
   const r = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: 'mistral-small-latest',
+      model,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -178,7 +181,13 @@ async function callMistral(userPrompt, systemPrompt) {
       temperature: 0.6,
     }),
   });
-  if (!r.ok) throw new Error(`Mistral HTTP ${r.status}`);
+  if (!r.ok) {
+    // Détail complet dans les logs Vercel (jamais renvoyé au client)
+    const raw = (typeof r.text === 'function')
+      ? await r.text().catch(() => 'corps illisible')
+      : '';
+    throw new Error(`Mistral HTTP ${r.status} - ${String(raw).slice(0, 300)}`);
+  }
   const data = await r.json();
   const text = data?.choices?.[0]?.message?.content;
   if (!text) throw new Error('Réponse Mistral vide');
