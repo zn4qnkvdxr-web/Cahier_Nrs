@@ -1,5 +1,5 @@
 type,tag,titre,desc,url
-"doc","Séminaire","Design structurel de prompt","Le support C01-C06 du séminaire, pour retrouver la méthode complète.","#"
+"doc","Séminaire","Design structurel de prompt","Le support C01-C06 du séminaire, pour retrouver la méthode complète.","https://companion-app-nrs.vercel.app"
 "doc","Guide","Anti-sèche du bon prompt","Une page, les 6 réflexes. À garder sous le coude pendant les défis.","#"
 "lien","Outil","Le bac à sable, en grand","Le chat IA en pleine page, sans défi imposé, pour expérimenter librement.","#"
 "lien","Aller + loin","Découvrir n8n","Le point de départ pour l’automatisation - utile avant les ateliers de septembre.","#"
