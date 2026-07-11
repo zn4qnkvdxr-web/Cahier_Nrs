@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Les Voyageurs de l'été · Tableau des scores</title>
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   TABLEAU DES SCORES - borne arcade CRT
+   Page isolée : aucun lien avec le cœur de l'app, accès par ?k=CLÉ.
+   Assets optionnels (tout fonctionne sans eux) :
+   · Diaporama  : content/img/scoreboard-banner-1.jpg, -2.jpg, …
+                  format recommandé 16:9, .jpg ou .png, < 400 Ko
+   · Audio      : sounds/intro-sound-1.mp3, sounds/intro-sound-2.mp3,
+                  sounds/background-music.mp3 (boucle)
+   ═══════════════════════════════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
+  overflow:hidden;-webkit-font-smoothing:none}
+
+/* ── Fond : diaporama sous le filtre CRT global ── */
+.bg{position:fixed;inset:0;z-index:0;background:
+  radial-gradient(80% 60% at 50% 20%, #101a3a 0%, #04050c 70%)}
+.bg img{position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;object-position:center;opacity:0} /* jamais déformé */
+.bg::after{content:"";position:absolute;inset:0;   /* lisibilité garantie */
+  background:linear-gradient(180deg, rgba(4,5,12,.82) 0%, rgba(4,5,12,.6) 40%,
+             rgba(4,5,12,.66) 70%, rgba(4,5,12,.9) 100%)}
+
+/* ── Filtre CRT global : TOUT passe dessous (fond + UI) ── */
+.crt{position:fixed;inset:0;z-index:50;pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.24) 0 2px, transparent 2px 4px)}
+.crt::before{content:"";position:absolute;inset:0;   /* lueur d'écran */
+  background:radial-gradient(120% 90% at 50% 8%, rgba(120,190,255,.09), transparent 55%)}
+.crt::after{content:"";position:absolute;inset:0;    /* bombé + vignette */
+  border-radius:2.5% / 3.5%;
+  box-shadow:inset 0 0 190px 55px rgba(0,0,0,.9)}
+@keyframes flick{0%,100%{opacity:1}50%{opacity:.965}}
+.crt{animation:flick .12s steps(1) infinite}
+@media(prefers-reduced-motion:reduce){.crt{animation:none}}
+
+/* ── Allumage TV ── */
+.boot{position:fixed;inset:0;z-index:60;background:#000;display:grid;place-items:center}
+.boot .beam{width:0;height:3px;background:#fff;border-radius:2px;
+  box-shadow:0 0 18px 4px #cfe9ff, 0 0 60px 10px rgba(150,200,255,.7)}
+
+/* ── UI ── */
+.ui{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;
+  align-items:center;padding:clamp(14px,3.5vh,34px) 14px;gap:clamp(10px,2.4vh,22px)}
+.gtx{background:linear-gradient(180deg,#ffe14d 0%,#ff9518 55%,#ff2d1a 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 0 rgba(0,0,0,.9)) drop-shadow(0 0 10px rgba(0,0,0,.65))}
+.hd{text-align:center}
+.hd h1{font-size:clamp(13px,3.4vw,30px);letter-spacing:.06em;line-height:1.5}
+.hd .sub{margin-top:10px;font-size:clamp(7px,1.5vw,11px);color:#7fe3a0;
+  text-shadow:0 0 8px rgba(90,255,150,.6)}
+.hd .sub .dot{display:inline-block;width:.7em;height:.7em;border-radius:50%;
+  background:#ff3b30;box-shadow:0 0 10px #ff3b30;margin-right:.6em;
+  animation:blink 1s steps(2) infinite;vertical-align:baseline}
+@keyframes blink{50%{opacity:.15}}
+
+/* grille des scores : alignement strict, lisible sur toute image */
+.board{width:min(940px,96vw);flex:1;display:flex;flex-direction:column;
+  justify-content:center;gap:clamp(6px,1.5vh,14px)}
+.row{display:grid;grid-template-columns:4.5ch minmax(0,1fr) 6ch 8ch;
+  gap:2ch;align-items:baseline;
+  font-size:clamp(9px,2.1vw,19px);line-height:1.4;padding:2px 6px}
+.row.head{font-size:clamp(7px,1.4vw,11px);color:#8ea2ff;
+  text-shadow:0 2px 0 #000, 0 0 8px rgba(0,0,0,.8);padding-bottom:6px}
+.row .r{text-align:left}
+.row .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .n .souv{font-family:system-ui;font-size:.9em;margin-left:.5ch;
+  filter:none;-webkit-text-fill-color:initial}
+.row .t{text-align:right}
+.row .s{text-align:right}
+.empty{font-size:clamp(9px,2vw,16px);text-align:center;color:#8ea2ff;
+  text-shadow:0 2px 0 #000;line-height:2}
+
+/* pagination */
+.pager{display:flex;align-items:center;gap:2.2ch;font-size:clamp(8px,1.6vw,12px)}
+.pager button{background:none;border:2px solid #ffb020;color:#ffb020;cursor:pointer;
+  font:inherit;padding:8px 12px;text-shadow:0 0 8px rgba(255,176,32,.5);
+  box-shadow:0 0 10px rgba(255,176,32,.25), inset 0 0 8px rgba(255,176,32,.12)}
+.pager button:disabled{opacity:.3;cursor:default}
+.pager .pg{color:#fff;text-shadow:0 2px 0 #000}
+.prog{width:min(300px,40vw);height:4px;background:rgba(255,255,255,.14)}
+.prog i{display:block;height:100%;width:0;background:#ffb020;box-shadow:0 0 8px #ffb020}
+
+/* pied : stats collectives */
+.ft{display:flex;flex-wrap:wrap;justify-content:center;gap:1.6ch 3.5ch;
+  font-size:clamp(7px,1.4vw,11px);color:#9fb4ff;text-shadow:0 2px 0 #000;text-align:center}
+.ft b{color:#fff}
+.coin{color:#ffe14d;animation:blink 1.15s steps(2) infinite;
+  text-shadow:0 0 10px rgba(255,225,77,.7)}
+.maj{position:fixed;left:12px;bottom:10px;z-index:12;font-size:8px;color:#5b6aa0}
+
+/* musique */
+.mbtn{position:fixed;right:14px;bottom:12px;z-index:55;background:rgba(0,0,0,.55);
+  border:2px solid #7fe3a0;color:#7fe3a0;font:inherit;font-size:9px;cursor:pointer;
+  padding:9px 11px;text-shadow:0 0 8px rgba(127,227,160,.6)}
+.mbtn[hidden]{display:none}
+
+/* accès refusé */
+.denied{color:#ff3b30;font-size:clamp(11px,3vw,24px);text-align:center;line-height:2;
+  text-shadow:0 2px 0 #000, 0 0 14px rgba(255,59,48,.6);animation:blink 1s steps(2) infinite}
+.denied small{display:block;font-size:.45em;color:#8ea2ff;animation:none;text-shadow:0 2px 0 #000}
+</style>
+</head>
+<body>
+
+<div class="bg" id="bg"></div>
+
+<main class="ui" id="ui">
+  <header class="hd">
+    <h1 class="gtx" id="title">☀ LES VOYAGEURS DE L'ÉTÉ ☀</h1>
+    <p class="sub"><span class="dot"></span>LIVE · RESTITUTION 24 SEPT</p>
+  </header>
+  <section class="board" id="board" aria-live="polite"></section>
+  <nav class="pager" id="pager" hidden>
+    <button id="prev" aria-label="Page précédente">◀</button>
+    <span class="pg" id="pg">1/1</span>
+    <button id="next" aria-label="Page suivante">▶</button>
+    <span class="prog" aria-hidden="true"><i id="prog"></i></span>
+  </nav>
+  <footer class="ft" id="ft"></footer>
+</main>
+
+<button class="mbtn" id="musicBtn" hidden>♪ PLAY</button>
+<div class="crt" aria-hidden="true"></div>
+<div class="boot" id="boot" aria-hidden="true"><i class="beam" id="beam"></i></div>
+<p class="maj" id="maj"></p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(function(){
+'use strict';
+var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+var $ = function(s){ return document.querySelector(s); };
+var K = new URLSearchParams(location.search).get('k') || '';
+var SOUV = {1:'🐚',2:'⚓',3:'🐋',4:'🏆'};
+var PAGE_SIZE = 10, AUTO_MS = 8000;
+
+/* ══════════ 1. AUDIO - entièrement optionnel, échec silencieux ══════════ */
+function mkAudio(src){
+  var a = new Audio();
+  a.preload = 'auto';
+  a._ok = new Promise(function(res){
+    a.addEventListener('canplaythrough', function(){ res(true); }, {once:true});
+    a.addEventListener('error', function(){ res(false); }, {once:true});
+    setTimeout(function(){ res(false); }, 6000); /* réseau lent ≠ blocage */
+  });
+  a.src = src;
+  return a;
+}
+/* joue et résout à la fin - résout immédiatement si 404/autoplay bloqué */
+function playThrough(a){
+  return a._ok.then(function(ok){
+    if(!ok) return;
+    return new Promise(function(res){
+      a.addEventListener('ended', function(){ res(); }, {once:true});
+      var p = a.play();
+      if(p && p.catch) p.catch(function(){ res(); });
+    });
+  }).catch(function(){});
+}
+var sIntro1 = mkAudio('sounds/intro-sound-1.mp3');
+var sIntro2 = mkAudio('sounds/intro-sound-2.mp3');
+var music   = mkAudio('sounds/background-music.mp3');
+
+/* Boucle musicale à fondu : fade-in au départ, fade-out avant la fin,
+   redémarrage enchaîné en fade-in (jamais de coupure sèche). */
+var FADE = 2.5, VOL = 0.55;
+var musicOn = false, userStopped = false, fading = false;
+function fadeTo(target, dur, then){
+  fading = true;
+  if(window.gsap){
+    gsap.killTweensOf(music);
+    gsap.to(music, {volume:target, duration:dur, ease:'none',
+      onComplete:function(){ fading=false; if(then) then(); }});
+  } else { music.volume = target; fading=false; if(then) then(); }
+}
+function startMusic(){
+  music._ok.then(function(ok){
+    if(!ok || userStopped || musicOn) return;
+    music.volume = 0;
+    var p = music.play();
+    if(p && p.catch) p.catch(function(){ return; });
+    p && p.then && p.then(function(){
+      musicOn = true; setBtn();
+      fadeTo(VOL, FADE);
+    });
+  }).catch(function(){});
+}
+music.addEventListener('timeupdate', function(){
+  if(!musicOn || fading || !music.duration) return;
+  if(music.duration - music.currentTime <= FADE + 0.08){
+    fadeTo(0, FADE, function(){
+      music.currentTime = 0;
+      var p = music.play(); if(p && p.catch) p.catch(function(){});
+      fadeTo(VOL, FADE);
+    });
+  }
+});
+var btn = $('#musicBtn');
+function setBtn(){ btn.textContent = musicOn ? '♪ STOP' : '♪ PLAY'; }
+music._ok.then(function(ok){ if(ok){ btn.hidden = false; setBtn(); } });
+btn.addEventListener('click', function(){
+  if(musicOn){
+    userStopped = true;
+    fadeTo(0, 0.8, function(){ music.pause(); });
+    musicOn = false; setBtn();
+  } else {
+    userStopped = false; startMusic();
+  }
+});
+/* l'autoplay est souvent bloqué avant un geste : premier tap = reprise douce */
+document.addEventListener('pointerdown', function(){
+  if(!musicOn && !userStopped) startMusic();
+}, {once:false});
+
+/* ══════════ 2. ALLUMAGE CRT - une seule fois par session ══════════ */
+function crtOn(){
+  return new Promise(function(res){
+    var boot = $('#boot'), beam = $('#beam');
+    if(reduce || !window.gsap){ boot.remove(); res(); return; }
+    var tl = gsap.timeline({onComplete:function(){ boot.remove(); res(); }});
+    tl.to(beam, {width:'92vw', duration:.32, ease:'expo.out'})
+      .to(beam, {height:'100vh', opacity:0, duration:.5, ease:'power2.in'}, '+=.08')
+      .to(boot, {opacity:0, duration:.35, ease:'power1.out'}, '<.15')
+      .from('#ui', {opacity:0, duration:.4}, '<');
+  });
+}
+function bootSequence(){
+  if(sessionStorage.getItem('lb_boot')){       /* revisite dans la session */
+    $('#boot').remove();
+    startMusic();
+    return;
+  }
+  sessionStorage.setItem('lb_boot','1');
+  playThrough(sIntro1)                          /* 1. son d'intro (ou rien) */
+    .then(crtOn)                                /* 2. allumage TV, toujours */
+    .then(function(){ return playThrough(sIntro2); }) /* 3. second jingle */
+    .then(startMusic)                           /* 4. boucle de fond */
+    .catch(function(){ /* l'audio ne bloque jamais le visuel */ });
+}
+
+/* ══════════ 3. DIAPORAMA - adaptatif 0 / 1 / N images ══════════ */
+/* Nomenclature : content/img/scoreboard-banner-1.jpg, -2.jpg, … (16:9) */
+function probeBanners(){
+  var found = [], i = 1, MAX = 12;
+  return new Promise(function(res){
+    (function next(){
+      if(i > MAX) return res(found);
+      var url = 'content/img/scoreboard-banner-' + i + '.jpg';
+      var im = new Image();
+      im.onload = function(){ found.push(url); i++; next(); };
+      im.onerror = function(){ res(found); };   /* premier trou = fin */
+      im.src = url;
+    })();
+  });
+}
+function startSlideshow(urls){
+  var bg = $('#bg');
+  if(!urls.length) return;                       /* 0 : fond CSS par défaut */
+  var imgs = urls.map(function(u){
+    var im = document.createElement('img');
+    im.src = u; im.alt = '';
+    bg.insertBefore(im, bg.firstChild);
+    return im;
+  });
+  imgs[0].style.opacity = 1;
+  if(urls.length === 1) return;                  /* 1 : bannière statique */
+  var cur = 0;                                   /* ≥2 : fondu enchaîné 6 s */
+  setInterval(function(){
+    var nxt = (cur + 1) % imgs.length;
+    if(window.gsap && !reduce){
+      gsap.to(imgs[cur], {opacity:0, duration:1.4, ease:'power1.inOut'});
+      gsap.to(imgs[nxt], {opacity:1, duration:1.4, ease:'power1.inOut'});
+    } else {
+      imgs[cur].style.opacity = 0; imgs[nxt].style.opacity = 1;
+    }
+    cur = nxt;
+  }, 6000);
+}
+
+/* ══════════ 4. DONNÉES + RENDU ══════════ */
+var DATA = null, page = 0, autoT = null, pauseUntil = 0;
+
+function ordinal(i){ return i === 0 ? '1ER' : (i + 1) + 'E'; }
+function scramble(el, finalText){
+  if(reduce){ el.textContent = finalText; return; }
+  var CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%';
+  var frame = 0, TOTAL = 9;
+  (function step(){
+    frame++;
+    var out = '';
+    for(var i = 0; i < finalText.length; i++){
+      var settled = i < (frame / TOTAL) * finalText.length;
+      out += settled ? finalText[i]
+           : (finalText[i] === ' ' ? ' ' : CH[Math.floor(Math.random() * CH.length)]);
+    }
+    el.textContent = out;
+    if(frame < TOTAL) setTimeout(step, 34);
+    else el.textContent = finalText;
+  })();
+}
+function cell(cls, txt, scr){
+  var s = document.createElement('span');
+  s.className = cls + ' gtx';
+  if(scr) scramble(s, txt); else s.textContent = txt;
+  return s;
+}
+function render(){
+  var b = $('#board'); b.innerHTML = '';
+  if(!DATA || !DATA.players.length){
+    b.innerHTML = '<p class="empty gtx">AUCUN VOYAGEUR EN MER<br>— À VOS TAMPONS —</p>';
+    $('#pager').hidden = true; return;
+  }
+  var head = document.createElement('div');
+  head.className = 'row head';
+  ['RANG','VOYAGEUR','TAMP.','SCORE'].forEach(function(t,i){
+    var s = document.createElement('span');
+    s.className = ['r','n','t','s'][i]; s.textContent = t; head.appendChild(s);
+  });
+  b.appendChild(head);
+  var start = page * PAGE_SIZE;
+  DATA.players.slice(start, start + PAGE_SIZE).forEach(function(p, j){
+    var row = document.createElement('div'); row.className = 'row';
+    row.appendChild(cell('r', ordinal(start + j), true));
+    var n = cell('n', (p.name || 'VOYAGEUR').toUpperCase().slice(0, 14), true);
+    if(p.themes && p.themes.length){
+      var sv = document.createElement('span'); sv.className = 'souv';
+      sv.textContent = p.themes.map(function(t){ return SOUV[t] || ''; }).join('');
+      n.appendChild(sv);
+    }
+    row.appendChild(n);
+    row.appendChild(cell('t', p.stamps + '/' + DATA.totalDefis, true));
+    row.appendChild(cell('s', String(p.score), true));
+    b.appendChild(row);
+    if(window.gsap && !reduce)
+      gsap.from(row, {opacity:0, y:14, duration:.3, delay:j * .04, ease:'power2.out'});
+  });
+  var pages = Math.ceil(DATA.players.length / PAGE_SIZE);
+  $('#pager').hidden = pages < 2;
+  $('#pg').textContent = (page + 1) + '/' + pages;
+  $('#prev').disabled = page === 0;
+  $('#next').disabled = page >= pages - 1;
+  armAuto(pages);
+  $('#ft').innerHTML =
+    'VOYAGEURS <b>' + DATA.totalPlayers + '</b> · ' +
+    'TAMPONS ÉQUIPE <b>' + DATA.totalStamps + '</b> · ' +
+    'THÈMES <b>' + DATA.totalThemes + '</b>' +
+    '<span class="coin" style="flex-basis:100%">INSERT COIN · 24 SEPT</span>';
+  $('#maj').textContent = 'MAJ ' + new Date().toLocaleTimeString('fr-FR',
+    {hour:'2-digit', minute:'2-digit'});
+}
+function go(p, manual){
+  page = p;
+  if(manual) pauseUntil = Date.now() + 20000;   /* on laisse lire */
+  render();
+}
+function armAuto(pages){
+  clearTimeout(autoT);
+  if(window.gsap && !reduce){
+    gsap.killTweensOf('#prog');
+    gsap.fromTo('#prog', {width:0}, {width:'100%', duration:AUTO_MS/1000, ease:'none'});
+  }
+  if(pages < 2) return;
+  autoT = setTimeout(function tick(){
+    if(Date.now() < pauseUntil){ autoT = setTimeout(tick, 1000); return; }
+    go((page + 1) % pages, false);
+  }, AUTO_MS);
+}
+$('#prev').addEventListener('click', function(){ if(page > 0) go(page - 1, true); });
+$('#next').addEventListener('click', function(){
+  var pages = DATA ? Math.ceil(DATA.players.length / PAGE_SIZE) : 1;
+  if(page < pages - 1) go(page + 1, true);
+});
+document.addEventListener('keydown', function(e){
+  if(e.key === 'ArrowLeft') $('#prev').click();
+  if(e.key === 'ArrowRight') $('#next').click();
+});
+
+function denied(msg){
+  $('#board').innerHTML = '<p class="denied">ACCESS DENIED<small>' +
+    (msg || 'ajoute ?k=TA_CLÉ à l\'URL') + '</small></p>';
+  $('#pager').hidden = true;
+}
+function load(){
+  if(!K){ denied(); return; }
+  fetch('/api/leaderboard?k=' + encodeURIComponent(K))
+    .then(function(r){
+      if(r.status === 401) throw new Error('denied');
+      if(!r.ok) throw new Error('http');
+      return r.json();
+    })
+    .then(function(d){
+      DATA = d;
+      var pages = Math.max(1, Math.ceil(d.players.length / PAGE_SIZE));
+      if(page >= pages) page = 0;
+      render();
+    })
+    .catch(function(e){
+      if(e.message === 'denied') denied('clé invalide');
+      else if(!DATA) denied('serveur injoignable - réessaie');
+    });
+}
+
+/* ══════════ Lancement ══════════ */
+window.addEventListener('load', function(){
+  bootSequence();          /* audio + allumage : jamais bloquant */
+  probeBanners().then(startSlideshow);
+  load();
+  setInterval(load, 60000); /* LIVE : rafraîchi chaque minute */
+});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "cahier-vacances-ia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cahier de vacances IA — mini-site interne, zéro coût (Vercel + Mistral/Gemini + Google Sheet)",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node test/e2e.test.js"
+  }
+}

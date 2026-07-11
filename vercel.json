@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/chat.js": {
+      "includeFiles": "{content/defis.csv,api/prompts/*.md}"
+    },
+    "api/leaderboard.js": {
+      "includeFiles": "content/defis.csv"
+    }
+  }
+}
