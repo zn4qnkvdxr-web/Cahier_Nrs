@@ -236,6 +236,19 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
 .chip.on{background:#fff;color:var(--ink);border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:22px;padding:20px 0 30px}
+/* Titre de palier : occupe toute la largeur de la grille, rythme la liste */
+.grid-head{grid-column:1/-1;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  margin:40px 2px 6px;padding-bottom:18px;
+  border-bottom:3px solid var(--ink-soft)}
+.grid-head:first-child{margin-top:8px}
+.grid-head .gh-emoji{font-size:clamp(2.2rem,6vw,3rem);line-height:1;
+  filter:drop-shadow(2px 2px 0 rgba(51,32,15,.12))}
+.grid-head .gh-lbl{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;
+  font-size:clamp(1.9rem,5.5vw,2.8rem);letter-spacing:-.02em;line-height:1;color:var(--ink-soft)}
+.grid-head .gh-count{font:700 .82rem 'Space Mono',monospace;color:var(--ink-soft);
+  margin-left:auto;background:var(--paper-2);padding:7px 15px;border-radius:var(--r-pill);
+  border:2.5px solid var(--ink)}
+.grid-head .gh-count.full{background:var(--fill-mint);color:var(--green-deep)}
 .cap-card{position:relative;display:flex;flex-direction:column;
   border-radius:var(--r-md);padding:26px 22px 22px;cursor:pointer;
   border:var(--bord);box-shadow:5px 5px 0 var(--ink);overflow:hidden;
@@ -445,9 +458,16 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
 .sb-io .sb-actions .btn-primary{flex:1;justify-content:center;min-height:52px;font-size:1.04rem}
 .sb-hint{font-size:.88rem;color:var(--ink-soft);margin-top:10px}
 /* ═══ Mode messagerie : fil, bulles, indicateur de réflexion ═══ */
+.sb-wrap{position:relative}                    /* ancre le bouton « aller en bas » */
 .sb-thread{display:flex;flex-direction:column;gap:12px;padding:16px 16px 8px;
-  max-height:52vh;overflow-y:auto;overscroll-behavior:contain}
+  max-height:52vh;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:auto}
 .sb-thread:empty{display:none}
+.to-bottom{position:absolute;right:14px;bottom:12px;z-index:8;width:38px;height:38px;
+  border-radius:50%;border:2.5px solid var(--ink);background:var(--paper);
+  box-shadow:2px 2px 0 var(--ink);cursor:pointer;display:grid;place-items:center;
+  font-size:1.1rem;line-height:1;padding:0;opacity:0;pointer-events:none;color:var(--ink)}
+.to-bottom.show{pointer-events:auto}
+.to-bottom:hover{background:var(--fill-butter)}
 .msg{position:relative;max-width:86%;padding:12px 14px;background:#fff;
   border:2.5px solid var(--ink);border-radius:14px 14px 14px 4px;
   box-shadow:3px 3px 0 var(--ink);font-size:.95rem;line-height:1.55}
@@ -816,7 +836,8 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
 
 /* --- Données : les escales de l'été (piloté par CSV GitHub en prod) --- */
 const CAPSULES = [
-  { id:'bcn1', palier:1, tag:'Escale 01', titre:'Cap sur Barcelone', time:'12 min', juge:1,
+  { id:'201', palier:2, mode:'prompt-juge', tag:'Escale 01', titre:'Cap sur Barcelone', time:'12 min',
+    ouverture:"Bienvenue à Barcelone ! Je suis ton guide local. Dis-moi ce que tu cherches et je te concocte le parcours idéal - mais plus tu es précis, meilleur je serai.",
     pitch:"Fais de l'IA ton assistant de voyage : itinéraire, bons plans, traductions.",
     intro:"Tu poses tes valises trois jours à Barcelone. Plutôt que d'ouvrir dix onglets, tu vas apprendre à demander à l'IA exactement ce dont tu as besoin - et à recadrer quand la réponse tombe à côté.",
     mission:"Demande un itinéraire d'une journée à Barcelone pour quelqu'un qui déteste la foule. Précise le quartier de départ, le rythme, et le format de réponse que tu veux.",
@@ -824,7 +845,7 @@ const CAPSULES = [
     ex:"Tu es un guide local à Barcelone. Propose-moi un itinéraire d'une journée loin des foules, départ Gràcia, rythme tranquille. Réponds sous forme d'un planning heure par heure.",
     sim:"Voici une journée à Barcelone loin de la cohue, au départ de Gràcia :\n\n9h00 - Petit-déjeuner Plaça de la Virreina, terrasse calme.\n10h30 - Búnkers del Carmel : vue panoramique, quasi personne le matin.\n13h00 - Déjeuner de tapas dans une bodega de quartier.\n16h00 - Balade dans le dédale de Gràcia, boutiques d'artisans.\n18h30 - Coucher de soleil au parc, loin des groupes.\n\nTu veux que je t'ajoute des adresses précises ?" },
 
-  { id:'bcn2', palier:2, tag:'Escale 01 · niveau +', titre:'Barcelone, 2 semaines', time:'18 min', pg:true,
+  { id:'202', palier:2, tag:'Escale 01 · niveau +', titre:'Barcelone, 2 semaines', time:'18 min', pg:true,
     pitch:"Même décor, autre ambition : conçois l'agent qui prépare tout le séjour à ta place.",
     intro:"Cette fois tu pars deux semaines. Plutôt que de tout demander à la main, tu vas concevoir le raisonnement d'un petit agent : il prend tes contraintes et produit un plan complet, jour par jour. On esquisse ici - on branchera n8n en atelier de septembre.",
     mission:"Décris, étape par étape, la logique d'un agent 'organisateur de séjour'. Quelles entrées ? Quelles étapes de traitement ? Quel livrable en sortie ? Fais-le raisonner à voix haute.",
@@ -832,7 +853,7 @@ const CAPSULES = [
     ex:"Agis comme un agent organisateur de séjour. Entrées : dates, budget, ville, centres d'intérêt. Décompose ta logique en étapes (collecte, priorisation, planification, mise en forme) puis produis un planning sur 14 jours. Explique chaque étape avant de la faire.",
     sim:"Logique de l'agent « Organisateur de séjour » :\n\n1. ENTRÉES - dates (14 j), budget, ville, intérêts, rythme.\n2. COLLECTE - lister sites, quartiers, événements sur la période.\n3. PRIORISATION - scorer selon intérêts + budget + distance.\n4. PLANIFICATION - répartir sur 14 jours, éviter les doublons, garder du mou.\n5. MISE EN FORME - restituer un planning + budget estimé par jour.\n\n→ Sortie : un tableau jour/matin/après-midi/soir, avec coût prévisionnel.\n\nEn n8n, l'étape 2 serait un nœud de recherche, l'étape 5 un nœud de génération de doc. On câble ça ensemble en septembre." },
 
-  { id:'bbq', palier:1, tag:'Escale 02', titre:'Le grand barbecue', time:'10 min',
+  { id:'212', palier:2, tag:'Escale 02', titre:'Le grand barbecue', time:'10 min',
     pitch:"Menu, quantités, liste de courses : l'IA gère l'intendance, tu gères l'apéro.",
     intro:"Douze convives dimanche. Tu vas apprendre à cadrer une sortie utile : pas un pavé, mais une liste de courses directement exploitable.",
     mission:"Fais générer une liste de courses pour un barbecue de 12 personnes, avec 2 végétariens. Impose le format : par rayon, avec quantités.",
@@ -840,7 +861,7 @@ const CAPSULES = [
     ex:"Établis la liste de courses d'un barbecue pour 12 personnes dont 2 végétariens. Format : classée par rayon du supermarché, avec quantités précises. Pas de texte autour.",
     sim:"VIANDE - 1,8 kg saucisses, 12 brochettes de poulet, 6 steaks.\nVÉGÉTARIEN - 6 galettes de légumes, 4 épis de maïs, 2 aubergines.\nPAIN - 12 buns, 2 baguettes.\nFRAIS - 500 g fromage, beurre, 1 kg salade composée.\nBOISSONS - 6 L eau, 12 sodas, glaçons.\nÀ CÔTÉ - charbon, allume-feu, papier alu.\n\nBesoin d'une version imprimable ?" },
 
-  { id:'playlist', palier:1, tag:'Escale 03', titre:'La playlist de l\'été', time:'8 min',
+  { id:'213', palier:2, tag:'Escale 03', titre:'La playlist de l\'été', time:'8 min',
     pitch:"Apprends à itérer : un premier jet, puis on affine jusqu'au résultat juste.",
     intro:"Une playlist ne se trouve pas du premier coup - elle s'affine. C'est l'exercice parfait pour comprendre l'itération : demander, juger, recadrer.",
     mission:"Demande une playlist pour un road-trip, puis affine-la en deux relances (trop calme ? trop récent ?). Observe comment tes précisions changent le résultat.",
@@ -848,7 +869,7 @@ const CAPSULES = [
     ex:"Propose 10 titres pour un road-trip ensoleillé, ambiance feel-good, plutôt intemporel. Évite les tubes trop entendus.",
     sim:"Voici 10 titres feel-good pour la route :\n\n1. Fleetwood Mac - Dreams\n2. Tame Impala - The Less I Know The Better\n3. Stevie Wonder - Signed, Sealed, Delivered\n4. Phoenix - Lisztomania\n5. Toto - Africa\n… (et 5 autres)\n\nTrop calme ? Trop connu ? Dis-moi et je réoriente." },
 
-  { id:'paint', palier:2, tag:'Escale 04 · niveau +', titre:'Repeindre le salon', time:'16 min', pg:true,
+  { id:'203', palier:2, tag:'Escale 04 · niveau +', titre:'Repeindre le salon', time:'16 min', pg:true,
     pitch:"Chiffrer un chantier : conçois un mini-outil qui estime surface, pots et budget.",
     intro:"Un projet perso concret : repeindre une pièce. On dépasse le simple conseil - tu vas concevoir la logique d'un estimateur qui prend des dimensions et sort un budget.",
     mission:"Conçois le raisonnement d'un 'estimateur peinture' : quelles entrées (dimensions, portes, fenêtres), quel calcul (surface nette, nombre de couches), quelle sortie (litres, pots, coût) ?",
@@ -856,7 +877,7 @@ const CAPSULES = [
     ex:"Agis comme un estimateur de chantier peinture. Entrées : L×l×h de la pièce, nombre de portes/fenêtres, nombre de couches. Détaille ton calcul de surface nette, puis déduis les litres, le nombre de pots et un coût estimé.",
     sim:"Estimateur peinture - logique :\n\n1. ENTRÉES - L, l, h ; nb portes ; nb fenêtres ; nb couches.\n2. SURFACE MURS - 2×(L+l)×h.\n3. DÉDUCTIONS - −2 m²/porte, −1,5 m²/fenêtre.\n4. SURFACE À PEINDRE - (murs nets) × nb couches.\n5. LITRES - surface ÷ 10 (rendement moyen).\n6. SORTIE - litres → pots (2,5 L) → coût (× prix/pot).\n\nEx. pièce 5×4×2,5, 1 porte, 2 fenêtres, 2 couches → ≈ 15 L → 6 pots → budget estimé.\n\nEn atelier : on transforme ça en formulaire n8n qui recrache une fiche PDF." },
 
-  { id:'rentree', palier:2, tag:'Escale 05 · niveau +', titre:'Survivre à la rentrée', time:'15 min', pg:true,
+  { id:'204', palier:2, tag:'Escale 05 · niveau +', titre:'Survivre à la rentrée', time:'15 min', pg:true,
     pitch:"Le retour approche : automatise le récap qui te remet en selle en 5 minutes.",
     intro:"Septembre arrive. Plutôt que de subir la reprise, conçois l'assistant qui déclenche ton récap : ce qui a bougé, ce qui t'attend, tes priorités de la semaine.",
     mission:"Décris un agent 'reprise de rentrée' : son déclencheur, les sources qu'il consulte, et la fiche de synthèse qu'il produit chaque lundi.",
@@ -864,7 +885,7 @@ const CAPSULES = [
     ex:"Conçois un agent 'reprise du lundi'. Déclencheur : chaque lundi 8h. Sources : mails non lus, agenda de la semaine, tâches en retard. Sortie : une fiche de 5 lignes avec mes 3 priorités. Détaille la logique.",
     sim:"Agent « Reprise du lundi » :\n\nDÉCLENCHEUR - chaque lundi, 8h00.\nSOURCES - mails non lus (7 j), agenda semaine, tâches en retard.\nTRAITEMENT - regrouper par sujet, repérer l'urgent, dédoublonner.\nSORTIE - fiche : « Cette semaine tu as 3 réunions clés, 2 échéances, et voici tes 3 priorités. »\n\nEn n8n : nœud déclencheur planifié → nœuds sources → nœud IA de synthèse → envoi. On l'assemble ensemble à la rentrée." },
 
-  { id:'qcm1', palier:1, mode:'qcm', tag:'Escale 07 · quiz', titre:'Le quiz du transat', time:'5 min',
+  { id:'101', palier:1, mode:'qcm', tag:'Escale 07 · quiz', titre:'Le quiz du transat', time:'5 min',
     objectif:"Vérifier ses réflexes prompt, façon quiz de plage.",
     pitch:"Trois questions, zéro pression : le quiz qui se joue un jus de fruit à la main.",
     intro:"Pas de rédaction ici : juste tes réflexes. Trois questions sur ce qui fait un bon prompt - réponds, le tampon tombe tout seul quand tout est bon.",
@@ -873,7 +894,7 @@ const CAPSULES = [
     ex:"", sim:"", sim2:"",
     data:"Que doit contenir un bon prompt ?|Le rôle, le contexte et le format attendu*|Uniquement la question|Le plus de mots possible;;L'IA répond à côté : que fais-tu ?|Je précise ce qui ne va pas et je relance*|J'abandonne|Je repose exactement la même question;;Pour une liste de courses exploitable, je demande…|Un format précis, classé par rayon*|Un texte libre|Une réponse la plus longue possible" },
 
-  { id:'rota1', palier:1, mode:'rotation', tag:'Escale 09 · puzzle mystère', titre:'Le portrait-robot en morceaux', time:'6 min',
+  { id:'102', palier:1, mode:'rotation', tag:'Escale 09 · puzzle mystère', titre:'Le portrait-robot en morceaux', time:'6 min',
     objectif:"Reconstituer l'image, puis nommer le concept IA qu'elle illustre.",
     pitch:"Neuf morceaux en vrac, un mot mystère au bout : reconstruis, puis devine.",
     intro:"Deux temps : d'abord tes doigts - tape les cases pour pivoter et remettre l'image à l'endroit. Ensuite ta tête - un champ s'ouvre et l'IA arbitre ta réponse au mot mystère, avec des indices si tu chauffes.",
@@ -882,7 +903,7 @@ const CAPSULES = [
     ex:"", sim:"", sim2:"",
     data:"demo-agent|agent" },
 
-  { id:'intrus1', palier:2, mode:'intrus', tag:'Escale 11 · intrus', titre:"Vraie photo, fausse photo", time:'6 min',
+  { id:'103', palier:1, mode:'intrus', tag:'Escale 11 · intrus', titre:"Vraie photo, fausse photo", time:'6 min',
     objectif:"Repérer les signatures visuelles d'une image générée par IA.",
     pitch:"Trois cartes postales, une seule sort d'une IA : sauras-tu la démasquer ?",
     intro:"Les images générées sont partout - et souvent bluffantes. Mais elles laissent des indices : lumière incohérente, doublons impossibles, textes déformés. À toi d'inspecter.",
@@ -890,7 +911,7 @@ const CAPSULES = [
     hint:"Zoome mentalement sur la lumière, les reflets et les lettres.",
     ex:"", sim:"", sim2:"", data:"" },
 
-  { id:'puzzle1', palier:2, mode:'puzzle', tag:'Escale 08 · puzzle', titre:"L'agent en pièces détachées", time:'8 min',
+  { id:'105', palier:1, mode:'puzzle', tag:'Escale 08 · puzzle', titre:"L'agent en pièces détachées", time:'8 min',
     objectif:"Mémoriser la séquence type d'un agent en la reconstituant.",
     pitch:"Les étapes d'un agent sont en vrac : remets la chaîne dans l'ordre, au doigt.",
     intro:"Un agent, c'est d'abord une séquence logique. On l'a vue en Grand large - maintenant tu la reconstruis de mémoire, pièce par pièce. Quand tout est à sa place, le tampon tombe.",
@@ -899,7 +920,8 @@ const CAPSULES = [
     ex:"", sim:"", sim2:"",
     data:"Définir l'objectif du séjour|Collecter les contraintes (dates, budget, envies)|Chercher et rassembler les options|Prioriser selon les critères|Générer le planning jour par jour|Faire valider le résultat par l'humain" },
 
-  { id:'duel1', palier:2, mode:'duel', tag:'Escale 06 · duel', titre:'Deux IA, un match', time:'15 min', gagnant:'a',
+  { id:'205', palier:2, mode:'duel', tag:'Escale 06 · duel', titre:'Deux IA, un match', time:'15 min', gagnant:'a',
+    ouverture:"Pose-moi ta question : je te donnerai une réponse carrée et fiable.;;Ne l'écoute pas, choisis-moi ! Avec moi, tu auras bien plus de détails et de style.",
     objectif:"Comparer deux IA sur la même consigne et garder l'esprit critique.",
     pitch:"Même prompt, deux IA : compare les réponses et apprends à ne rien croire sur parole.",
     intro:"Toutes les IA ne répondent pas pareil : ton, structure, précision… et parfois des erreurs différentes. Ici, ton prompt part vers deux modèles en même temps - à toi de comparer. C'est le réflexe critique le plus utile de l'été.",
@@ -909,7 +931,7 @@ const CAPSULES = [
     sim:"Voici 5 incontournables familiaux à Barcelone :\n\n1. Parc Güell - dès 9h, billets coupe-file en ligne.\n2. Aquarium - début d'après-midi, calme vers 14h.\n3. Plage de la Barceloneta - fin de journée.\n4. Fontaine magique de Montjuïc - spectacle en soirée.\n5. La Sagrada Família - créneau 10h, audioguide enfants.\n\nAstuce générale : les billets datés évitent 90 % des files.",
     sim2:"Top 5 avec un enfant de 6 ans :\n\n① CosmoCaixa (musée des sciences) - matin, très interactif.\n② Parc Güell - 8h30 à l'ouverture, zone monumentale réservée.\n③ Téléphérique de Montjuïc - avant 11h.\n④ Barceloneta + glace - 17h.\n⑤ Fontaine magique - vérifie les jours de spectacle, horaires variables selon la saison.\n\n💡 Remarque : les deux listes ne citent pas les mêmes lieux - lequel des deux musées correspond le mieux à ton enfant ?" },
 
-  { id:'bcn3', palier:3, tag:'Escale 01 · haute mer', titre:'Barcelone en pilote auto', time:'25 min',
+  { id:'301', palier:3, tag:'Escale 01 · haute mer', titre:'Barcelone en pilote auto', time:'25 min',
     pitch:"Fais coopérer plusieurs agents : veille des vols, planning, récap envoyé tout seul.",
     intro:"Dernier cran : tu ne conçois plus un agent, mais une chaîne où plusieurs maillons coopèrent - veille, décision, génération, envoi. C'est exactement ce qu'on assemblera dans n8n aux ateliers de septembre.",
     mission:"Décris une chaîne de 3 agents coopérants pour organiser le séjour : qui déclenche qui, quelles données circulent entre eux, et où places-tu le point de contrôle humain ?",
@@ -917,7 +939,7 @@ const CAPSULES = [
     ex:"Conçois une chaîne de 3 agents : 1) veilleur de vols (déclencheur prix), 2) planificateur (itinéraire selon budget restant), 3) rédacteur (récap soumis à validation). Décris les données échangées et le checkpoint humain.",
     sim:"Chaîne « Séjour autonome » :\n\nAGENT 1 - VEILLEUR : surveille les prix des vols. Déclencheur : baisse sous ton seuil. → transmet {dates, prix} à l'agent 2.\n\nAGENT 2 - PLANIFICATEUR : calcule le budget restant, génère l'itinéraire. → transmet {planning} à l'agent 3.\n\nAGENT 3 - RÉDACTEUR : met en forme le récap complet.\n\n⚠ CHECKPOINT HUMAIN : rien n'est réservé sans ta validation - l'agent propose, tu disposes.\n\nEn n8n : 3 workflows reliés par webhooks, validation en un clic." },
 
-  { id:'agence', palier:4, tag:'Escale finale · cap horn', titre:"L'agence qui tourne seule", time:'30 min', chrono:30, final:1,
+  { id:'401', palier:4, tag:'Escale finale · cap horn', titre:"L'agence qui tourne seule", time:'30 min', chrono:30, final:1,
     objectif:"Concevoir un système agentique robuste de bout en bout.",
     pitch:"Le boss final : une chaîne complète qui encaisse les imprévus sans perdre le contrôle humain.",
     intro:"Une chaîne qui marche quand tout va bien, c'est un prototype. Une chaîne qui gère le vol annulé, l'API muette et le budget dépassé, c'est un système. Dernier cran avant les ateliers : la robustesse.",
@@ -959,7 +981,7 @@ function exportMD(c){
   if(tr.m==='duel'){
     if(H){ let n=0; for(const m of H){
       if(m.r==='u'){ n++; md+='\n## Prompt '+n+'\n\n```\n'+(m.t||'')+'\n```\n'; }
-      else if(m.r==='d'){ md+='\n## Réponse Mistral\n\n'+(m.a||'')+'\n\n## Réponse Gemini\n\n'+(m.b||'')+'\n'; }
+      else if(m.r==='d' && m.p!=='opening'){ md+='\n## Réponse Mistral\n\n'+(m.a||'')+'\n\n## Réponse Gemini\n\n'+(m.b||'')+'\n'; }
     } }
     else md+='\n## Mon prompt\n\n```\n'+(tr.q||'')+'\n```\n\n## Réponse Mistral\n\n'+(tr.a||'')+'\n\n## Réponse Gemini\n\n'+(tr.b||'')+'\n';
   }
@@ -1104,7 +1126,7 @@ async function runAudit(c){
   if(ask) ask.disabled=true;
   const host=$('#capBody .sandbox');
   const ov=host?auditOverlay(host):null;
-  let win=false, verdict='';
+  let win=false, verdict='', netFail=false;
   try{
     if(CONFIG.DEMO){
       await new Promise(r=>setTimeout(r, reduce?200:1500));
@@ -1112,23 +1134,50 @@ async function runAudit(c){
       const t=lastU.t||'';
       win=/\d/.test(t) && t.length>60;
       verdict=win
-        ? "Timing, préférences et moyens : tes contraintes donnent des rails parfaits à l'IA."
-        : "Bon début, mais il manque des contraintes : un timing précis, un style d'activité, et un budget ou moyen de transport.";
+        ? "Bravo ! Tes contraintes chiffrées donnent des rails parfaits à l'IA - c'est exactement l'esprit d'un bon prompt."
+        : "Bon début ! Ton prompt gagnerait à préciser davantage : pense à une contrainte de temps, un style d'activité et un budget ou moyen de transport. Ajoute-les et retente !";
     } else {
       const api=h.map(m=> m.r==='u'?{role:'user',content:m.t}:{role:'assistant',content:m.t});
-      const r=await fetch(CONFIG.API_BASE+'/api/chat',{method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'validate', capsule:c.id, history:api})});
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      const d=await r.json();
-      win=!!d.win; verdict=d.text||'';
+      let r, d;
+      try{
+        r=await fetch(CONFIG.API_BASE+'/api/chat',{method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({action:'validate', capsule:c.id, history:api})});
+      }catch(neterr){
+        /* SEULE vraie panne réseau : fetch qui rejette (hors-ligne, DNS…) */
+        console.warn('audit : réseau injoignable', neterr);
+        netFail=true;
+      }
+      if(!netFail){
+        /* Réponse reçue : on lit le verdict, même si le HTTP n'est pas 200.
+           Le serveur renvoie toujours un 'text' exploitable (verdict, rejet
+           doux ou message d'indisponibilité) → jamais de secours générique. */
+        try{ d=await r.json(); }catch(parseErr){ d=null; }
+        if(d && (typeof d.text==='string')){
+          win=!!d.win; verdict=d.text;
+        } else if(d && d.error){
+          win=false; verdict="L'audit a rencontré un souci : "+d.error+" Réessaie dans un instant.";
+        } else {
+          win=false; verdict="Réponse inattendue de l'auditeur. Ta tentative est enregistrée - reclique sur Valider.";
+        }
+      }
     }
   }catch(e){
-    console.warn('audit indisponible', e);
-    verdict="L'auditeur est injoignable - réessaie dans un instant.";
+    console.warn('audit : erreur inattendue', e);
+    netFail=true;
   }
   if(ov) await ov.close();
-  const rep=addMsg('note',(win?'✅ RAPPORT D\'AUDIT - APPROUVÉ\n':'⛔ RAPPORT D\'AUDIT - À RETRAVAILLER\n')+verdict);
+  if(netFail){
+    /* Vraie coupure : message honnête, joueur non pénalisé, pas de tampon */
+    addMsg('note','📡 Connexion interrompue pendant l\'audit. Ta tentative est bien là - reclique sur « Valider » quand la connexion revient.').classList.add('audit-ko');
+    tryVibrate([40,30,40]);
+    if(inp) inp.disabled=false;
+    if(ask) ask.disabled=!(inp && (inp.value||'').trim());
+    if(cd) cd.disabled=false;
+    auditBusy=false;
+    return;
+  }
+  const rep=addMsg('note',(win?'✅ RAPPORT D\'AUDIT - VALIDÉ\n':'📝 RAPPORT D\'AUDIT - À PEAUFINER\n')+verdict);
   rep.classList.add(win?'audit-ok':'audit-ko');
   if(win){
     lockComposer();
@@ -1542,9 +1591,8 @@ function openPassport(){
 }
 
 /* --- Sommaire --- */
-function renderGrid(){
-  const list=CAPSULES.filter(c=> state.filter==='all' || ('p'+c.palier)===state.filter);
-  $('#grid').innerHTML=list.map((c,i)=>`
+function capCardHTML(c){
+  return `
     <article class="cap-card ${state.done.has(c.id)?'done':''} ${+c.final?'final':''}" data-id="${c.id}">
       <div class="done-mark" style="color:${inkFor(c.id)}">✓</div>
       <div class="tag">${c.tag}</div>
@@ -1555,9 +1603,38 @@ function renderGrid(){
         <span class="time">${c.time}</span>
         <span class="go">→</span>
       </div>
-    </article>`).join('');
+    </article>`;
+}
+function gridHeadHTML(p){
+  const L=LEVELS[p]||LEVELS[1];
+  const list=CAPSULES.filter(c=>c.palier===p);
+  const done=list.filter(c=>state.done.has(c.id)).length;
+  const full=done===list.length && list.length>0;
+  return `<div class="grid-head">
+      <span class="gh-emoji">${L.suns}</span>
+      <span class="gh-lbl">${L.lbl}</span>
+      <span class="gh-count${full?' full':''}">${done}/${list.length}${full?' ✓':''}</span>
+    </div>`;
+}
+function renderGrid(){
+  let html='';
+  if(state.filter==='all'){
+    /* Vue « Tout » : on rythme par palier, un titre de section par groupe non vide */
+    [1,2,3,4].forEach(p=>{
+      const grp=CAPSULES.filter(c=>c.palier===p);
+      if(!grp.length) return;
+      html+=gridHeadHTML(p)+grp.map(capCardHTML).join('');
+    });
+  } else {
+    /* Vue filtrée sur un palier : pas de titre (un seul groupe), grille simple */
+    html=CAPSULES.filter(c=>('p'+c.palier)===state.filter).map(capCardHTML).join('');
+  }
+  $('#grid').innerHTML=html;
   $$('#grid .cap-card').forEach(el=>el.onclick=()=>openCapsule(el.dataset.id));
-  if(window.gsap && !reduce) gsap.from('#grid .cap-card',{y:22,opacity:0,stagger:.06,duration:.45,ease:'power2.out',clearProps:'all'});
+  if(window.gsap && !reduce){
+    gsap.from('#grid .grid-head',{y:14,opacity:0,stagger:.05,duration:.4,ease:'power2.out',clearProps:'all'});
+    gsap.from('#grid .cap-card',{y:22,opacity:0,stagger:.05,duration:.45,ease:'power2.out',clearProps:'all'});
+  }
 }
 $('#filters').addEventListener('click',e=>{
   const b=e.target.closest('.chip'); if(!b)return;
@@ -1588,7 +1665,10 @@ function openCapsule(id){
     </div>` : c.mode==='duel' ? `
     <div class="sandbox">
       <div class="sb-head"><span class="d"></span><span>Duel - même prompt, deux IA</span></div>
-      <div class="sb-thread" id="sbThread" aria-live="polite"></div>
+      <div class="sb-wrap">
+        <div class="sb-thread" id="sbThread" aria-live="polite"></div>
+        <button class="to-bottom" id="toBottom" type="button" aria-label="Aller au dernier message" title="Aller au dernier message">↓</button>
+      </div>
       <div class="sb-io">
         <textarea id="sbInput" placeholder="Écris ton prompt ici…"></textarea>
         <div class="sb-actions">
@@ -1600,7 +1680,10 @@ function openCapsule(id){
     </div>` : `
     <div class="sandbox">
       <div class="sb-head"><span class="d"></span><span>Bac à sable - teste sans risque</span></div>
-      <div class="sb-thread" id="sbThread" aria-live="polite"></div>
+      <div class="sb-wrap">
+        <div class="sb-thread" id="sbThread" aria-live="polite"></div>
+        <button class="to-bottom" id="toBottom" type="button" aria-label="Aller au dernier message" title="Aller au dernier message">↓</button>
+      </div>
       <div class="sb-io">
         <textarea id="sbInput" placeholder="Écris ton prompt ici…"></textarea>
         <div class="sb-actions">
@@ -1633,12 +1716,41 @@ function openCapsule(id){
   $('#capsuleView').scrollTop=0; /* jamais hériter du scroll d'un autre défi */
   if(isGame){ initGame(c); }
   else{
+    /* Bouton « aller au dernier message » : descente fluide contrôlée */
+    const _tb=$('#toBottom');
+    if(_tb){ _tb._shown=false; _tb.onclick=()=>threadScroll(true); }
+    const _th=$('#sbThread');
+    if(_th) _th.addEventListener('scroll', syncToBottomBtn, {passive:true});
     /* CTA gardé : inactif tant que le champ est vide (l'exemple le débloque) */
     const inp=$('#sbInput'), ask=$('#sbAsk');
     const gate=()=>{ if(!genBusy) ask.disabled=!(inp.value||'').trim(); };
     inp.addEventListener('input', gate); gate();
     ask.onclick=()=>simAnswer(c);
     $('#sbEx').onclick=()=>{ inp.value=c.ex; gate(); inp.focus(); };
+    /* Ouverture (bonus, 100% optionnelle) : une réplique d'accueil scriptée,
+       affichée au tout premier accès si la colonne CSV `ouverture` est remplie.
+       Aucun appel API. Persistée dans l'historique pour survivre au refresh.
+       Si la colonne est vide → comportement de base strictement inchangé. */
+    const tr0=getTrace(c.id);
+    const opening=(c.ouverture||'').trim();
+    const hasHist = tr0 && Array.isArray(tr0.h) && tr0.h.length;
+    if(opening && !hasHist && ['prompt','prompt-juge','duel'].includes(c.mode)){
+      /* On PERSISTE l'ouverture ; c'est la restauration ci-dessous qui l'affiche
+         (une seule fois, avec fade-in). Comportement selon le mode : */
+      let hist;
+      if(c.mode==='duel'){
+        /* Duel : chaque IA a SA propre réplique. Convention CSV : "réplique A;;réplique B".
+           Sans séparateur, la même ouverture s'affiche des deux côtés. Rôle 'd' →
+           la restauration la rend nativement dans les 2 panneaux A/B. */
+        const parts=opening.split(';;');
+        const oa=(parts[0]||'').trim();
+        const ob=(parts[1]!==undefined?parts[1]:parts[0]||'').trim();
+        hist=[{r:'d',a:oa,b:ob,p:'opening'}];
+      } else {
+        hist=[{r:'a',t:opening,p:'opening'}];
+      }
+      saveTrace(c.id, Object.assign({}, tr0||{}, {m:(c.mode==='duel'?'duel':'prompt'), h:hist}));
+    }
     /* restauration : le fil complet (User + IA) rejoué depuis le localStorage */
     const tr=getTrace(c.id);
     if(tr){
@@ -1647,21 +1759,34 @@ function openCapsule(id){
         : (tr.m==='duel'   && tr.q ? [{r:'u',t:tr.q},{r:'d',a:tr.a||'',b:tr.b||''}] : []));
       for(const m of H){
         if(m.r==='u') addMsg('u', m.t||'');
-        else if(m.r==='a') addMsg('a', m.t||'', provLabel(m.p));
+        else if(m.r==='a') addMsg('a', m.t||'', m.p==='opening'?(judgedDuel?'':"L'hôte"):provLabel(m.p));
         else if(m.r==='d'){
           const row=addDuelRow();
-          aiBubble(row, judgedDuel?'Réponse A':'Mistral · IA européenne').querySelector('.mt').textContent=m.a||'';
-          aiBubble(row, judgedDuel?'Réponse B':'Gemini · Google').querySelector('.mt').textContent=m.b||'';
+          /* Ouverture : mise en scène d'accueil, pas encore les réponses → chips neutres.
+             Vrai échange : chips "Réponse A/B" (départage) ou fournisseurs (duel classique). */
+          const chipA = m.p==='opening' ? '' : (judgedDuel?'Réponse A':'Mistral · IA européenne');
+          const chipB = m.p==='opening' ? '' : (judgedDuel?'Réponse B':'Gemini · Google');
+          aiBubble(row, chipA).querySelector('.mt').textContent=m.a||'';
+          aiBubble(row, chipB).querySelector('.mt').textContent=m.b||'';
         }
       }
       threadScroll();
-      if(judgedDuel && (state.done.has(c.id)||(tr&&tr.solved))){
-        addMsg('note','✅ Duel départagé - la bonne réponse était la '+(String(c.gagnant).trim().toLowerCase()==='a'?'A':'B')+'.').classList.add('audit-ok');
-        lockComposer();
+      if(judgedDuel){
+        if(state.done.has(c.id)||(tr&&tr.solved)){
+          /* Duel déjà résolu : rappel du verdict + composeur verrouillé */
+          addMsg('note','✅ Duel départagé - la bonne réponse était la '+(String(c.gagnant).trim().toLowerCase()==='a'?'A':'B')+'.').classList.add('audit-ok');
+          lockComposer();
+        } else {
+          /* Duel départagé rouvert SANS choix fait : on réarme le départage sur
+             le dernier VRAI échange. On EXCLUT l'ouverture (p:'opening'), sinon
+             les boutons A/B s'afficheraient alors qu'aucun duel n'a encore eu lieu. */
+          const lastD=[...H].reverse().find(m=>m.r==='d' && m.p!=='opening');
+          if(lastD) armDuelChoice(c);
+        }
       }
     }
   }
-  $('#capDone').onclick=()=> (String(c.juge||'').trim()==='1' && !isGame) ? runAudit(c) : completeCapsule(c.id);
+  $('#capDone').onclick=()=> (c.mode==='prompt-juge' && !isGame) ? runAudit(c) : completeCapsule(c.id);
   $('#capReturn').onclick=()=>{ stopChrono(); $('#capsuleView').classList.remove('open'); };
   const mdb=$('#mdExport'); if(mdb) mdb.onclick=()=>exportMD(c);
   const rdb=$('#redoBtn'); if(rdb) rdb.onclick=()=>redoCapsule(c);
@@ -1670,17 +1795,15 @@ function openCapsule(id){
 $('#capBack').onclick=()=>{ stopChrono(); $('#capsuleView').classList.remove('open'); };
 
 /* --- Simulation de réponse IA (effet machine à écrire) --- */
-function typewrite(t, text){
-  /* Renvoie une promesse resolue a la FIN de la frappe : les verrous de
-     boutons tiennent tant que le texte s'affiche. */
+function revealText(t, text, onGrow){
+  /* Apparition moderne : le message complet s'affiche d'un coup en fondu doux,
+     fiable sur tous navigateurs. Promesse résolue une fois affiché (option A). */
   return new Promise(done=>{
-    t.parentElement.classList.add('cursor-blink');
-    if(reduce){ t.textContent=text; t.parentElement.classList.remove('cursor-blink'); done(); return; }
-    let i=0; const speed=12;
-    (function type(){
-      if(i<=text.length){ t.textContent=text.slice(0,i); i+=2; setTimeout(type,speed); }
-      else { t.parentElement.classList.remove('cursor-blink'); done(); }
-    })();
+    t.textContent=String(text);
+    if(onGrow) onGrow();                   /* le scroll cadre le message entier */
+    if(reduce || !window.gsap){ done(); return; }
+    gsap.fromTo(t,{opacity:0,y:6},{opacity:1,y:0,duration:.34,ease:'power2.out',
+      onComplete:done});
   });
 }
 /* --- Moteur de jeux (validation organique : la réussite tamponne toute seule) --- */
@@ -2045,20 +2168,38 @@ function unlockAsk(){
 
 /* ═══ Mode messagerie : helpers du fil ═══ */
 function threadEl(){ return document.getElementById('sbThread'); }
+function nearBottom(th){ return th.scrollHeight - th.scrollTop - th.clientHeight < 90; }
 function threadScroll(smooth){
   const th=threadEl(); if(!th) return;
   if(smooth && !reduce) th.scrollTo({top:th.scrollHeight, behavior:'smooth'});
   else th.scrollTop=th.scrollHeight;
+  syncToBottomBtn();
 }
-/* Pendant la frappe : la bulle grandit → on suit le bas en continu,
-   sauf si le voyageur a volontairement remonté le fil (>90px du bas). */
+/* Suivi doux de la croissance d'un message, image par image (rAF = zéro à-coup),
+   suspendu si le voyageur remonte volontairement le fil. */
 function threadPin(){
   const th=threadEl(); if(!th) return ()=>{};
-  let stick=true;
-  const onScroll=()=>{ stick = th.scrollHeight - th.scrollTop - th.clientHeight < 90; };
+  let stick=true, raf=0, prev=th.scrollHeight;
+  const onScroll=()=>{ stick=nearBottom(th); syncToBottomBtn(); };
   th.addEventListener('scroll', onScroll, {passive:true});
-  const id=setInterval(()=>{ if(stick) th.scrollTop=th.scrollHeight; }, 120);
-  return ()=>{ clearInterval(id); th.removeEventListener('scroll', onScroll); };
+  (function loop(){
+    if(stick && th.scrollHeight!==prev){ prev=th.scrollHeight; th.scrollTop=th.scrollHeight; }
+    raf=requestAnimationFrame(loop);
+  })();
+  return ()=>{ cancelAnimationFrame(raf); th.removeEventListener('scroll', onScroll); };
+}
+
+/* ═══ Bouton flottant « aller au dernier message » ═══ */
+function toBottomBtn(){ return document.getElementById('toBottom'); }
+function syncToBottomBtn(){
+  const th=threadEl(), b=toBottomBtn(); if(!th||!b) return;
+  const show=!nearBottom(th);
+  if(show===b._shown) return;
+  b._shown=show;
+  if(window.gsap && !reduce){
+    if(show){ b.classList.add('show'); gsap.fromTo(b,{opacity:0,y:8},{opacity:1,y:0,duration:.25,ease:'power2.out'}); }
+    else gsap.to(b,{opacity:0,y:8,duration:.2,ease:'power2.in',onComplete:()=>b.classList.remove('show')});
+  } else { b.style.opacity=show?'1':'0'; b.classList.toggle('show',show); }
 }
 function bubbleIn(el){
   if(window.gsap && !reduce) gsap.from(el,{opacity:0,y:20,duration:.4,ease:'power2.out'});
@@ -2102,8 +2243,8 @@ function startThinking(el){
 async function settleAnswer(el, text){
   if(el._dots){ el._dots.kill(); el._dots=null; }
   const t=el.querySelector('.mt'); t.textContent='';
-  const unpin=threadPin();          /* la réponse reste visible au-dessus des boutons */
-  try{ await typewrite(t, text); }
+  const unpin=threadPin();          /* le fil suit la croissance, sans à-coups */
+  try{ await revealText(t, text, ()=>{ /* suivi assuré par threadPin (rAF) */ }); }
   finally{ unpin(); }
   threadScroll(true);
 }
@@ -2124,21 +2265,31 @@ async function duelAnswer(c){
     const judged=String(c.gagnant||'').trim();
     const A=aiBubble(row, judged?'Réponse A':'Mistral · IA européenne'),
           B=aiBubble(row, judged?'Réponse B':'Gemini · Google');
-    startThinking(A); startThinking(B);
     let ta, tb;
     if(CONFIG.DEMO){
-      await new Promise(r=>setTimeout(r, reduce?80:650)); /* laisse vivre les points */
-      ta=c.sim||''; tb=c.sim2||c.sim||'';
+      /* Démo : on garde le séquencement (A puis B) pour un ressenti identique */
+      startThinking(A);
+      await new Promise(r=>setTimeout(r, reduce?80:600));
+      ta=c.sim||''; await settleAnswer(A, ta);
+      startThinking(B);
+      await new Promise(r=>setTimeout(r, reduce?80:600));
+      tb=c.sim2||c.sim||''; await settleAnswer(B, tb);
     } else {
+      /* Séquentiel chaîné : la 2e IA ne part QUE lorsque la 1re a entièrement
+         terminé - intégrité totale de chaque génération, zéro interférence. */
       const call=prov=>fetch(CONFIG.API_BASE+'/api/chat',{method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({prompt, capsule:c.id, provider:prov})
       }).then(r=>{ if(!r.ok) throw 0; return r.json(); });
-      const [ra,rb]=await Promise.allSettled([call('mistral'),call('gemini')]);
-      ta = ra.status==='fulfilled' ? (ra.value.text||'(vide)') : (c.sim  || 'Mistral fait la sieste - réessaie.');
-      tb = rb.status==='fulfilled' ? (rb.value.text||'(vide)') : (c.sim2 || 'Gemini fait la sieste - réessaie.');
+      startThinking(A);
+      try{ const ra=await call('mistral'); ta=ra.text||'(vide)'; }
+      catch(e){ ta=c.sim || 'Mistral fait la sieste - réessaie.'; }
+      await settleAnswer(A, ta);
+      startThinking(B);
+      try{ const rb=await call('gemini'); tb=rb.text||'(vide)'; }
+      catch(e){ tb=c.sim2 || 'Gemini fait la sieste - réessaie.'; }
+      await settleAnswer(B, tb);
     }
-    await Promise.all([settleAnswer(A, ta), settleAnswer(B, tb)]);
     hist.push({r:'d',a:ta.slice(0,6000),b:tb.slice(0,6000)});
     saveTrace(c.id,{m:'duel',h:hist,q:prompt,a:ta.slice(0,6000),b:tb.slice(0,6000)}); /* persistance (IA) */
     if(judged){ armDuelChoice(c); }

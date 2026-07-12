@@ -65,23 +65,38 @@ function computePlayer(stateJson, maj) {
   try { st = JSON.parse(stateJson); } catch (e) { return null; }
   if (!st || typeof st !== 'object') return null;
   const { byId, themes } = loadDefis();
-  const done = Array.isArray(st.done) ? st.done.filter((id) => byId[id]) : [];
+
+  // Robustesse : on ne compte QUE les défis encore présents dans le CSV (règle B1).
+  // Un défi supprimé du référentiel cesse d'être crédité ; un id inconnu (faute de
+  // frappe, défi retiré, état d'une version antérieure) est ignoré sans planter.
+  // Dédoublonnage : un même id validé deux fois ne rapporte qu'une fois.
+  const rawDone = Array.isArray(st.done) ? st.done : [];
+  const done = [...new Set(rawDone.filter((id) => typeof id === 'string' && byId[id]))];
   if (!done.length) return null;
+
   let score = 0;
   for (const id of done) {
-    score += byId[id].niveau * 10;
-    if (byId[id].final) score += 20;
+    const d = byId[id];
+    const niveau = Number.isFinite(d.niveau) && d.niveau > 0 ? d.niveau : 1; // garde-fou niveau
+    score += niveau * 10;
+    if (d.final) score += 20;
   }
+
+  // Thème complété : uniquement si le palier contient au moins un défi ET que tous
+  // ses défis présents sont validés. Un palier vidé de ses défis ne compte pas.
+  const doneSet = new Set(done);
   const themesDone = [];
   for (const [niveau, ids] of Object.entries(themes)) {
-    if (ids.length && ids.every((id) => done.includes(id))) {
+    if (ids.length && ids.every((id) => doneSet.has(id))) {
       score += 30;
       themesDone.push(parseInt(niveau, 10));
     }
   }
-  const name = String(st.name || 'Voyageur').slice(0, 24);
+
+  const name = String(st.name || 'Voyageur').slice(0, 24) || 'Voyageur';
   const ts = Date.parse(maj) || 0;
-  return { name, score, stamps: done.length, themes: themesDone.sort(), ts };
+  // Score borné à 0 (jamais négatif, quoi qu'il arrive au référentiel).
+  return { name, score: Math.max(0, score), stamps: done.length, themes: themesDone.sort((a, b) => a - b), ts };
 }
 
 // --- Cache mémoire : une lecture du Sheet publié par minute maximum ---

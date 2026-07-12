@@ -112,8 +112,9 @@ function splitJudge(md) {
 }
 async function loadJudge(capsuleId) {
   const d = loadDefis()[capsuleId];
-  const ref = parseContexteRef(d && d.contexte_ia);
-  if (ref.kind !== 'files' || ref.b) return '';   // Juge : défis prompt mono-fichier
+  if (!d || d.mode !== 'prompt-juge') return '';   // audit réservé au type dédié
+  const ref = parseContexteRef(d.contexte_ia);
+  if (ref.kind !== 'files' || ref.b) return '';    // Juge : mono-fichier .md
   const raw = await loadPromptFile(ref.a);
   return splitJudge(raw).judge;
 }
@@ -217,14 +218,23 @@ module.exports = async (req, res) => {
       return res.status(200).json({ text: "Audit indisponible - défi validé d'office.", win: true, provider: 'aucun' });
     }
     const judgeSystem =
-      "Tu es le Juge d'un exercice d'art du prompting. Voici les critères de validation" +
-      " rédigés par l'équipe pédagogique :\n" + judge + "\n" +
-      "Analyse le DERNIER message envoyé par l'utilisateur (son prompt le plus récent)," +
-      " en t'aidant du fil complet. Réponds en français, 80 mots maximum." +
-      " Si TOUS les critères sont respectés : commence ta réponse par exactement [APPROUVE]," +
-      " puis une phrase qui souligne la qualité des contraintes posées." +
-      " Sinon : commence par exactement [REJETE], puis explique poliment et précisément" +
-      " quel(s) ingrédient(s) manquent, sans jamais rédiger le prompt à sa place.";
+      "Tu es le Juge bienveillant d'un exercice d'art du prompting : ton rôle est de " +
+      "faire progresser le joueur, pas de le piéger. Voici les critères de validation " +
+      "définis par l'équipe pédagogique :\n" + judge + "\n\n" +
+      "Analyse UNIQUEMENT le DERNIER message de l'utilisateur (son prompt le plus récent), " +
+      "en t'aidant du fil pour le contexte. Sois indulgent sur la forme : un critère compte " +
+      "comme rempli dès qu'il est présent, même implicitement (peu importe la formulation exacte).\n\n" +
+      "FORMAT DE RÉPONSE OBLIGATOIRE — ta réponse DOIT commencer par l'un de ces deux marqueurs, " +
+      "écrit exactement ainsi, majuscules et crochets compris, SANS aucun texte avant :\n" +
+      "[APPROUVE] si TOUS les critères sont réunis.\n" +
+      "[REJETE] s'il en manque au moins un.\n\n" +
+      "Après le marqueur, en français, 60 mots maximum, ton chaleureux et encourageant :\n" +
+      "- Si [APPROUVE] : félicite précisément en nommant les bons éléments que le joueur a fournis " +
+      "(ex : « ton timing 14h-18h et ton budget serré donnent des rails parfaits »).\n" +
+      "- Si [REJETE] : commence par saluer ce qui est déjà bien, PUIS nomme précisément le ou les " +
+      "ingrédient(s) manquant(s) et donne un indice concret pour les ajouter, SANS jamais rédiger " +
+      "le prompt à sa place (ex : « Bon départ avec le lieu ! Il te manque une contrainte de temps : " +
+      "essaie de préciser une plage horaire »). Reste motivant, jamais sec.";
     let verdict = '';
     let vProv = 'mistral';
     try { verdict = await callMistral('', judgeSystem, messages); }
@@ -232,13 +242,49 @@ module.exports = async (req, res) => {
       console.warn('[chat] Juge MISTRAL KO → bascule Gemini :', e1.message);
       try { verdict = await callGemini('', judgeSystem, messages); vProv = 'gemini'; }
       catch (e2) {
-        console.error('[chat] Juge indisponible :', e2.message);
-        return res.status(502).json({ error: "L'auditeur fait la sieste. Réessaie dans un instant." });
+        console.error('[chat] Juge indisponible (2 moteurs KO) :', e2.message);
+        // 200 + judgeError : le front affiche CE message (pas son secours générique)
+        // et laisse le joueur retenter sans le pénaliser.
+        return res.status(200).json({
+          judgeError: true, win: false,
+          text: "L'auditeur reprend son souffle 😅 Ta tentative est bien enregistrée — clique de nouveau sur Valider dans un instant."
+        });
       }
     }
-    const m = String(verdict).trim().match(/^["'«\s]*\[?\s*(APPROUVE|REJETE)\s*\]?\s*[:\-.,»"']*\s*/i);
-    const win = !!(m && /APPROUVE/i.test(m[1]));
-    const text = m ? String(verdict).trim().slice(m[0].length).trim() : String(verdict).trim();
+    // Parsing du verdict — priorité au marqueur ENTRE CROCHETS (le format imposé),
+    // ce qui évite les faux positifs : une phrase comme « je ne peux pas approuver »
+    // ne doit JAMAIS valider. Tolère accents (APPROUVÉ/REJETÉ), casse et espaces.
+    const raw = String(verdict).trim();
+    const norm = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // sans accents
+    const clean = (t) => t
+      .replace(/\*+/g, '')                      // retire le gras Markdown (**)
+      .replace(/^["'«»\s:.\-,\]]+/, '')        // ponctuation/guillemets de tête
+      .trim();
+    // 1) Cas nominal : marqueur explicitement encadré [APPROUVE] / [REJETE]
+    const bracket = norm.match(/\[\s*(APPROUVE|REJETE)\s*\]/i);
+    let win, text;
+    if (bracket) {
+      win = /APPROUVE/i.test(bracket[1]);
+      const idx = norm.indexOf(bracket[0]);
+      text = clean(raw.slice(0, idx) + raw.slice(idx + bracket[0].length));
+    } else {
+      // 2) Repli : le LLM a oublié les crochets. On n'accepte alors le marqueur
+      //    QUE s'il est en tête de réponse (ancré) — jamais au milieu d'une phrase,
+      //    pour ne pas confondre un « approuver » incident avec une validation.
+      const lead = norm.match(/^\s*(APPROUVE|REJETE)\b/i);
+      if (lead) {
+        win = /APPROUVE/i.test(lead[1]);
+        text = clean(raw.slice(lead[0].length));
+      } else {
+        // 3) Aucun marqueur exploitable : verdict RÉEL mais indécis (pas une panne).
+        //    Rejet doux et instructif — on ne valide jamais par défaut.
+        console.warn('[chat] Juge : verdict sans marqueur clair, rejet doux. Début:', raw.slice(0, 80));
+        win = false;
+        text = raw.length > 12
+          ? clean(raw)
+          : "Presque ! Reprends ton prompt et vérifie qu'il précise bien chaque élément attendu, puis retente.";
+      }
+    }
     return res.status(200).json({ text, win, provider: vProv, verdict: true });
   }
 
@@ -264,7 +310,7 @@ module.exports = async (req, res) => {
   //     chacun avec SON system prompt (résolu ci-dessus selon le fournisseur) ---
   if (requested === 'mistral') {
     try {
-      const text = await callMistral(userPrompt, systemPrompt);
+      const text = await callMistral(userPrompt, systemPrompt, messages);
       return res.status(200).json({ text, provider: 'mistral' });
     } catch (err) {
       console.warn('[chat] duel Mistral KO :', err.message);
@@ -273,7 +319,7 @@ module.exports = async (req, res) => {
   }
   if (requested === 'gemini') {
     try {
-      const text = await callGemini(userPrompt, systemPrompt);
+      const text = await callGemini(userPrompt, systemPrompt, messages);
       return res.status(200).json({ text, provider: 'gemini' });
     } catch (err) {
       console.warn('[chat] duel Gemini KO :', err.message);
@@ -315,7 +361,7 @@ async function callMistral(userPrompt, systemPrompt, historyMsgs) {
       messages: [{ role: 'system', content: systemPrompt }].concat(
         historyMsgs || [{ role: 'user', content: userPrompt }]
       ),
-      max_tokens: 600,
+      max_tokens: 1500,
       temperature: 0.6,
     }),
   });
@@ -347,7 +393,7 @@ async function callGemini(userPrompt, systemPrompt, historyMsgs) {
         role: m.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: m.content }],
       })),
-      generationConfig: { maxOutputTokens: 600, temperature: 0.6 },
+      generationConfig: { maxOutputTokens: 1500, temperature: 0.6 },
     }),
   });
   if (!r.ok) {

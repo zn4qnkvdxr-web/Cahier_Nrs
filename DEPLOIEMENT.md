@@ -195,6 +195,18 @@ cahier. **Aucune modification de Code.gs.** Mise en service en 3 gestes :
   `sounds/background-music.mp3` (boucle à fondus). Fichiers absents = la
   séquence visuelle joue normalement, en silence.
 
+**Ajouts et suppressions de défis en cours de route** — le classement s'y adapte
+seul, aucune manœuvre requise :
+- *Nouveau défi publié* : le total possible monte pour tout le monde ; les scores
+  acquis ne bougent pas ; le compteur du palier concerné se « rouvre » (ex. 8/8 ✓
+  redevient 8/9), signalant la nouveauté.
+- *Défi supprimé* (règle B1) : il cesse d'être compté ; l'éventuel tampon d'un
+  joueur pointant vers lui est ignoré proprement (jamais de plantage, jamais de
+  score faussé ou négatif). Le dénominateur « X/total » suit le CSV courant.
+- *Défi qui change de niveau* : son poids en points s'ajuste au prochain calcul.
+- *États joueurs malformés ou partiels* : écartés silencieusement, les autres
+  restent classés.
+
 Barème affiché : défi = niveau × 10 (+20 si ★ final) · thème complété = +30 ·
 égalité départagée par le premier arrivé. Rafraîchissement LIVE chaque minute.
 

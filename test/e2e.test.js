@@ -43,6 +43,13 @@ global.fetch = async (url, opts = {}) => {
     if (NET.mistral === 'down') throw new Error('ECONNREFUSED');
     if (NET.mistral === 'approve') return jr(200, { choices: [{ message: { content: '[APPROUVE] Excellentes contraintes : timing, style et budget sont posés.' } }] });
     if (NET.mistral === 'reject')  return jr(200, { choices: [{ message: { content: '[REJETE] Il manque une notion de budget ou de transport.' } }] });
+    if (NET.mistral === 'accent')  return jr(200, { choices: [{ message: { content: '[APPROUVÉ] Parfait, tout y est.' } }] });
+    if (NET.mistral === 'preamble') return jr(200, { choices: [{ message: { content: 'Analysons ton prompt. [APPROUVE] Timing et budget sont là.' } }] });
+    if (NET.mistral === 'spaces')  return jr(200, { choices: [{ message: { content: '[ REJETE ] Ajoute une plage horaire.' } }] });
+    if (NET.mistral === 'nomark')  return jr(200, { choices: [{ message: { content: 'Ton prompt est correct mais pourrait préciser le budget avec plus de détails encore.' } }] });
+    if (NET.mistral === 'fauxami') return jr(200, { choices: [{ message: { content: 'Je ne peux pas approuver ce prompt sans une contrainte de budget.' } }] });
+    if (NET.mistral === 'gras')    return jr(200, { choices: [{ message: { content: '**[APPROUVE]** Timing et budget sont bien là.' } }] });
+    if (NET.mistral === 'judgefail') { const e = new Error('Mistral HTTP 500'); throw e; }
     return jr(200, { choices: [{ message: { content: 'Réponse Mistral simulée' } }] });
   }
   if (String(url).includes('generativelanguage.googleapis.com')) {
@@ -52,7 +59,7 @@ global.fetch = async (url, opts = {}) => {
   }
   if (String(url).includes('script.example')) {
     const payload = JSON.parse(opts.body);
-    if (payload.action === 'load') return jr(200, { ok: true, state: { name: 'Tarik', palier: 3, done: ['bcn1'] } });
+    if (payload.action === 'load') return jr(200, { ok: true, state: { name: 'Tarik', palier: 3, done: ['101'] } });
     return jr(200, { ok: true });
   }
   throw new Error('URL inattendue : ' + url);
@@ -75,7 +82,7 @@ const fs = require('fs');
   await t('nominal : Mistral répond', async () => {
     NET.mistral = 'ok';
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: 'bcn1' }, ip: '10.0.0.1' }), res);
+    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: '201' }, ip: '10.0.0.1' }), res);
     assert.equal(res._.code, 200);
     assert.equal(res._.body.provider, 'mistral');
     assert.match(res._.body.text, /Mistral/);
@@ -84,7 +91,7 @@ const fs = require('fs');
   await t('quota Mistral 429 → bascule Gemini transparente', async () => {
     NET.mistral = '429';
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: 'bcn1' }, ip: '10.0.0.2' }), res);
+    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: '201' }, ip: '10.0.0.2' }), res);
     assert.equal(res._.code, 200);
     assert.equal(res._.body.provider, 'gemini');
   });
@@ -107,14 +114,14 @@ const fs = require('fs');
 
   await t('duel : provider=gemini imposé, sans bascule', async () => {
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Duel', capsule: 'duel1', provider: 'gemini' }, ip: '10.0.0.5' }), res);
+    await chat(makeReq({ body: { prompt: 'Duel', capsule: '205', provider: 'gemini' }, ip: '10.0.0.5' }), res);
     assert.equal(res._.body.provider, 'gemini');
   });
 
   await t('duel : provider=mistral en panne → 502 (pas de bascule cachée)', async () => {
     NET.mistral = '429';
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Duel', capsule: 'duel1', provider: 'mistral' }, ip: '10.0.0.6' }), res);
+    await chat(makeReq({ body: { prompt: 'Duel', capsule: '205', provider: 'mistral' }, ip: '10.0.0.6' }), res);
     assert.equal(res._.code, 502);
     assert.equal(res._.body.provider, 'mistral');
     NET.mistral = 'ok';
@@ -130,7 +137,7 @@ const fs = require('fs');
   await t('contexte_ia injecté côté serveur (capsule connue)', async () => {
     NET.captured.length = 0;
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Y', capsule: 'duel1' }, ip: '10.0.0.8' }), res);
+    await chat(makeReq({ body: { prompt: 'Y', capsule: '205' }, ip: '10.0.0.8' }), res);
     const sent = JSON.parse(NET.captured[0].opts.body);
     assert.match(sent.messages[0].content, /Cadre du défi en cours/);
     assert.match(sent.messages[0].content, /human-in-the-loop/);
@@ -198,7 +205,7 @@ const fs = require('fs');
     NET.captured.length = 0;
     const res = makeRes();
     await save(makeReq({
-      body: { action: 'save', code: 'ETE-AB2CD', state: { name: 'x'.repeat(200), palier: 99, done: Array(100).fill('bcn1') } },
+      body: { action: 'save', code: 'ETE-AB2CD', state: { name: 'x'.repeat(200), palier: 99, done: Array(100).fill('101') } },
       ip: '20.0.0.1',
     }), res);
     assert.equal(res._.code, 200);
@@ -269,6 +276,60 @@ const fs = require('fs');
     delete process.env.LEADERBOARD_KEY;
   });
 
+  await t('leaderboard robustesse : id de défi supprimé/inconnu ignoré (B1), score jamais faux', async () => {
+    process.env.LEADERBOARD_KEY = 'SECRETK';
+    process.env.SHEET_ETATS_CSV_URL = 'http://sheet.local/etats.csv';
+    const oldFetch = global.fetch;
+    global.fetch = async (url) => {
+      if (String(url).includes('sheet.local')) return { ok: true, status: 200, text: async () =>
+        'code,etat_json,maj\n' +
+        '"ETE-ZZZZZ","{""name"":""Zoe"",""done"":[""201"",""DEFI_SUPPRIME"",""faute_frappe""]}","2026-07-01 10:00:00"\n' };
+      return oldFetch(url);
+    };
+    try {
+      // module rechargé pour vider son cache interne
+      delete require.cache[require.resolve('../api/leaderboard.js')];
+      const lb2 = require('../api/leaderboard.js');
+      const r = makeRes();
+      await lb2({ method: 'GET', url: '/api/leaderboard?k=SECRETK', query: { k: 'SECRETK' }, headers: {} }, r);
+      assert.equal(r._.code, 200, 'pas de crash sur id inconnu');
+      assert.equal(r._.body.players[0].stamps, 1, 'seul le défi présent compte');
+      assert.ok(r._.body.players[0].score >= 0, 'score jamais négatif');
+      assert.ok(!JSON.stringify(r._.body).includes('DEFI_SUPPRIME'), 'id fantôme jamais exposé');
+    } finally {
+      global.fetch = oldFetch;
+      delete process.env.SHEET_ETATS_CSV_URL; delete process.env.LEADERBOARD_KEY;
+      delete require.cache[require.resolve('../api/leaderboard.js')];
+    }
+  });
+
+  await t('leaderboard robustesse : états malformés écartés sans planter', async () => {
+    process.env.LEADERBOARD_KEY = 'SECRETK';
+    process.env.SHEET_ETATS_CSV_URL = 'http://sheet.local/etats.csv';
+    const oldFetch = global.fetch;
+    global.fetch = async (url) => {
+      if (String(url).includes('sheet.local')) return { ok: true, status: 200, text: async () =>
+        'code,etat_json,maj\n' +
+        '"ETE-BAD1","{json casse","2026-07-01 10:00:00"\n' +
+        '"ETE-BAD2","{""name"":""SansDone""}","2026-07-01 10:00:00"\n' +
+        '"ETE-GOOD","{""name"":""Ok"",""done"":[""201""]}","2026-07-01 10:00:00"\n' };
+      return oldFetch(url);
+    };
+    try {
+      delete require.cache[require.resolve('../api/leaderboard.js')];
+      const lb2 = require('../api/leaderboard.js');
+      const r = makeRes();
+      await lb2({ method: 'GET', url: '/api/leaderboard?k=SECRETK', query: { k: 'SECRETK' }, headers: {} }, r);
+      assert.equal(r._.code, 200);
+      assert.equal(r._.body.players.length, 1, 'seul l\'état valide survit');
+      assert.equal(r._.body.players[0].name, 'Ok');
+    } finally {
+      global.fetch = oldFetch;
+      delete process.env.SHEET_ETATS_CSV_URL; delete process.env.LEADERBOARD_KEY;
+      delete require.cache[require.resolve('../api/leaderboard.js')];
+    }
+  });
+
   await t('leaderboard : barème (niveau×10, +20 final, +30 thème), tri, zéro code exposé', async () => {
     process.env.LEADERBOARD_KEY = 'SECRETK';
     process.env.SHEET_ETATS_CSV_URL = 'http://sheet.local/etats.csv';
@@ -276,8 +337,8 @@ const fs = require('fs');
     global.fetch = async (url, opts) => {
       if (String(url).includes('sheet.local')) return { ok: true, status: 200, text: async () =>
         'code,etat_json,maj\n' +
-        '"ETE-AAAAA","{""name"":""Léa"",""done"":[""bcn1"",""qcm1""]}","2026-07-01 10:00:00"\n' +
-        '"ETE-BBBBB","{""name"":""Sam"",""done"":[""agence""]}","2026-07-02 10:00:00"\n' };
+        '"ETE-AAAAA","{""name"":""Léa"",""done"":[""201"",""101""]}","2026-07-01 10:00:00"\n' +
+        '"ETE-BBBBB","{""name"":""Sam"",""done"":[""401""]}","2026-07-02 10:00:00"\n' };
       return oldFetch(url, opts);
     };
     try {
@@ -287,8 +348,8 @@ const fs = require('fs');
       const b = r._.body;
       assert.equal(b.players[0].name, 'Sam');   // agence : 40 + 20 (final) + 30 (thème) = 90
       assert.equal(b.players[0].score, 90);
-      assert.equal(b.players[1].score, 20);     // 2 défis de niveau 1
-      assert.equal(b.totalDefis, 24);
+      assert.equal(b.players[1].score, 30);     // 201(niv2=20) + 101(niv1=10) = 30
+      assert.equal(b.totalDefis, 25);
       assert.ok(!JSON.stringify(b).includes('ETE-'), 'codes jamais exposés');
     } finally {
       global.fetch = oldFetch;
@@ -302,18 +363,18 @@ const fs = require('fs');
     assert.ok(fs2.existsSync('api/prompts/duel1_a.md') && fs2.existsSync('api/prompts/duel1_b.md'), 'fichiers duel');
     for (const prov of ['mistral', 'gemini']) {
       const r = makeRes();
-      await chat(makeReq({ body: { prompt: 'Test', capsule: 'duel1', provider: prov }, ip: '10.0.9.' + (prov === 'gemini' ? 2 : 1) }), r);
+      await chat(makeReq({ body: { prompt: 'Test', capsule: '205', provider: prov }, ip: '10.0.9.' + (prov === 'gemini' ? 2 : 1) }), r);
       assert.equal(r._.code, 200);
       assert.equal(r._.body.provider, prov);
     }
     const srcC = fs2.readFileSync('api/chat.js', 'utf8');
     eval(srcC.slice(srcC.indexOf('function parseCSV'), srcC.indexOf('// --- Prompts externalisés')));
     const rows = parseCSV(fs2.readFileSync('content/defis.csv', 'utf8'));
-    const d = rows.find((x) => x.id === 'duel1');
+    const d = rows.find((x) => x.id === '205');
     assert.equal(d.contexte_ia, 'duel1_a.md;duel1_b.md');
     assert.equal(d.gagnant, 'a', 'duel départagé');
-    const b1 = rows.find((x) => x.id === 'bcn1');
-    assert.equal(b1.juge, '1', 'bcn1 jugé');
+    const b1 = rows.find((x) => x.id === '201');
+    assert.equal(b1.mode, 'prompt-juge', '201 est un défi prompt-juge');
     assert.ok(fs2.readFileSync('api/prompts/bcn1.md', 'utf8').includes('CRITÈRES DU JUGE'));
     assert.ok(rows.filter((x) => /\.md$/.test(x.contexte_ia)).length >= 3, 'défis migrés en .md');
   });
@@ -327,11 +388,110 @@ const fs = require('fs');
     assert.equal(r._.code, 200); // capsule inconnue → cadre générique, zéro crash
   });
 
+  await t('BUG A · faux positif : « je ne peux pas approuver » → win:FALSE', async () => {
+    NET.mistral = 'fauxami';
+    const r = makeRes();
+    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'un tour a Barcelone'}] }, ip:'10.5.0.1' }), r);
+    assert.equal(r._.body.win, false, 'un refus contenant « approuver » ne doit jamais valider');
+    assert.ok(r._.body.text.includes('budget'));
+    NET.mistral = 'ok';
+  });
+
+  await t('BUG A · gras Markdown **[APPROUVE]** → win:true, ** retiré du texte', async () => {
+    NET.mistral = 'gras';
+    const r = makeRes();
+    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'De 14h a 18h, culturel, petit budget, a pied'}] }, ip:'10.5.0.2' }), r);
+    assert.equal(r._.body.win, true);
+    assert.ok(!r._.body.text.includes('*'), 'astérisques Markdown nettoyés');
+    assert.ok(!/APPROUVE/i.test(r._.body.text), 'marqueur retiré');
+    NET.mistral = 'ok';
+  });
+
+  await t('BUG C · duel transmet l\'historique aux deux moteurs', async () => {
+    // capture des corps envoyés : le duel doit inclure les messages, pas un prompt nu
+    NET.captured = [];
+    for (const prov of ['mistral', 'gemini']) {
+      const r = makeRes();
+      await chat(makeReq({ body: { prompt: 'Compare', capsule: '205', provider: prov,
+        history: [{ role:'user', content:'premier' }, { role:'assistant', content:'reponse' }, { role:'user', content:'Compare' }] },
+        ip: '10.5.0.' + (prov === 'gemini' ? 4 : 3) }), r);
+      assert.equal(r._.code, 200);
+      assert.equal(r._.body.provider, prov);
+    }
+    // au moins un appel Mistral et un Gemini avec plusieurs messages transmis
+    const bodyOf = (c) => { try { return JSON.parse(c.opts.body); } catch (e) { return {}; } };
+    const mis = NET.captured.find((c) => c.url.includes('mistral.ai') && Array.isArray(bodyOf(c).messages) && bodyOf(c).messages.length > 2);
+    const gem = NET.captured.find((c) => c.url.includes('generativelanguage') && Array.isArray(bodyOf(c).contents) && bodyOf(c).contents.length > 1);
+    assert.ok(mis, 'Mistral reçoit l\'historique en duel');
+    assert.ok(gem, 'Gemini reçoit l\'historique en duel');
+  });
+
+  await t('juge parsing : [APPROUVÉ] avec accent → win:true', async () => {
+    NET.mistral = 'accent';
+    const r = makeRes();
+    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'14h-18h Gràcia culturel à pied petit budget'}] }, ip:'10.4.0.1' }), r);
+    assert.equal(r._.body.win, true);
+    assert.ok(!/APPROUV/i.test(r._.body.text), 'marqueur retiré');
+    NET.mistral = 'ok';
+  });
+
+  await t('juge parsing : marqueur précédé d\'un préambule → détecté', async () => {
+    NET.mistral = 'preamble';
+    const r = makeRes();
+    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'De 14h à 18h, culturel, petit budget'}] }, ip:'10.4.0.2' }), r);
+    assert.equal(r._.body.win, true);
+    assert.ok(!/\[?APPROUVE\]?/i.test(r._.body.text), 'marqueur retiré même avec préambule');
+    NET.mistral = 'ok';
+  });
+
+  await t('juge parsing : [ REJETE ] avec espaces → win:false', async () => {
+    NET.mistral = 'spaces';
+    const r = makeRes();
+    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'un tour à Barcelone'}] }, ip:'10.4.0.3' }), r);
+    assert.equal(r._.body.win, false);
+    assert.ok(r._.body.text.includes('plage horaire'));
+    NET.mistral = 'ok';
+  });
+
+  await t('juge parsing : aucun marqueur → rejet doux instructif (pas une panne)', async () => {
+    NET.mistral = 'nomark';
+    const r = makeRes();
+    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'itinéraire'}] }, ip:'10.4.0.4' }), r);
+    assert.equal(r._.code, 200);
+    assert.equal(r._.body.win, false);
+    assert.ok(r._.body.text.length > 12, 'message instructif, pas vide');
+    assert.ok(!/injoignable|sieste/i.test(r._.body.text), 'jamais le message de panne');
+    NET.mistral = 'ok';
+  });
+
+  await t('juge : 2 moteurs KO → 200 + judgeError + text exploitable (jamais un 502 sec)', async () => {
+    NET.mistral = 'judgefail'; NET.gemini = 'down';
+    const r = makeRes();
+    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'test'}] }, ip:'10.4.0.5' }), r);
+    assert.equal(r._.code, 200, 'pas de 502 : le front doit pouvoir afficher le texte');
+    assert.equal(r._.body.judgeError, true);
+    assert.equal(r._.body.win, false);
+    assert.ok(typeof r._.body.text === 'string' && r._.body.text.length > 0);
+    NET.mistral = 'ok'; NET.gemini = 'ok';
+  });
+
+  await t('prompt standard : jamais d\'audit LLM (validate → validé d\'office)', async () => {
+    // bbq est un défi prompt pur : loadJudge doit renvoyer '' → win d'office, zéro appel Juge
+    const r = makeRes();
+    await chat(makeReq({ body: { action: 'validate', capsule: '212',
+      history: [{ role: 'user', content: 'test' }] }, ip: '10.3.0.9' }), r);
+    assert.equal(r._.code, 200);
+    assert.equal(r._.body.win, true);
+    assert.ok(r._.body.text.includes('Audit indisponible'), 'pas d\'arbitrage sur un prompt pur');
+    const src = require('fs').readFileSync('api/chat.js', 'utf8');
+    assert.ok(src.includes("d.mode !== 'prompt-juge'"), 'audit réservé au type dédié');
+  });
+
   /* ─── Le Juge (action validate) ─── */
   await t('juge : [APPROUVE] → win:true, tag retiré du verdict', async () => {
     NET.mistral = 'approve';
     const r = makeRes();
-    await chat(makeReq({ body: { action: 'validate', capsule: 'bcn1',
+    await chat(makeReq({ body: { action: 'validate', capsule: '201',
       history: [{ role: 'user', content: 'De 14h à 18h à Gràcia, culturel et insolite, à pied, petit budget.' }] },
       ip: '10.1.0.1' }), r);
     assert.equal(r._.code, 200);
@@ -343,7 +503,7 @@ const fs = require('fs');
   await t('juge : [REJETE] → win:false + explication pédagogique', async () => {
     NET.mistral = 'reject';
     const r = makeRes();
-    await chat(makeReq({ body: { action: 'validate', capsule: 'bcn1',
+    await chat(makeReq({ body: { action: 'validate', capsule: '201',
       history: [{ role: 'user', content: 'Un après-midi à Barcelone stp' }] },
       ip: '10.1.0.2' }), r);
     assert.equal(r._.code, 200);
@@ -354,7 +514,7 @@ const fs = require('fs');
 
   await t('juge : défi sans critères → validé d\'office, jamais de crash', async () => {
     const r = makeRes();
-    await chat(makeReq({ body: { action: 'validate', capsule: 'bbq',
+    await chat(makeReq({ body: { action: 'validate', capsule: '212',
       history: [{ role: 'user', content: 'x' }] }, ip: '10.1.0.3' }), r);
     assert.equal(r._.code, 200);
     assert.equal(r._.body.win, true);
@@ -367,12 +527,12 @@ const fs = require('fs');
     global.CAPSULES = eval('(' + h.slice(sC + 'const CAPSULES = '.length, h.indexOf('];', sC) + 1) + ')');
     const src = h.slice(h.indexOf('const INKS='), h.indexOf('function avatarInk'));
     eval(src);
-    assert.equal(inkFor('bcn1'), inkFor('bbq'));        // même niveau 1 → même encre
-    assert.equal(inkFor('bcn1'), '#5C8F26');            // niveau 1 = vert
-    assert.equal(inkFor('duel1'), '#015F70');           // niveau 2 = bleu
-    assert.equal(inkFor('bcn3'), '#C13515');            // niveau 3 = rouge
-    assert.equal(inkFor('agence'), '#B8860B');          // niveau 4 = or
-    assert.notEqual(inkFor('bcn1'), inkFor('agence'));  // niveaux ≠ encres ≠
+    assert.equal(inkFor('101'), inkFor('102'));         // palier 1 → même encre
+    assert.equal(inkFor('101'), '#5C8F26');             // palier 1 = vert
+    assert.equal(inkFor('205'), '#015F70');             // palier 2 = bleu
+    assert.equal(inkFor('301'), '#C13515');             // palier 3 = rouge
+    assert.equal(inkFor('401'), '#B8860B');             // palier 4 = or
+    assert.notEqual(inkFor('101'), inkFor('401'));      // paliers ≠ encres ≠
   });
 
   await t('parseCSV serveur : BOM + point-virgule Excel tolérés', async () => {
@@ -385,12 +545,38 @@ const fs = require('fs');
     assert.equal(rows[0].titre, 'Salut; toi');
   });
 
-  await t('defis.csv : 24 défis, 4 niveaux couverts, duel complet', async () => {
+  await t('ouverture duel : n\'arme PAS les boutons de départage (bug corrigé)', async () => {
+    // le code de réarmement doit exclure les messages d'ouverture (p:'opening')
+    const src = require('fs').readFileSync('index.html', 'utf8');
+    assert.ok(src.includes("m.r==='d' && m.p!=='opening'"),
+      'réarmement du départage exclut l\'ouverture');
+    // l'affichage de l'ouverture duel utilise des chips neutres (pas Réponse A/B)
+    assert.ok(src.includes("m.p==='opening' ? '' : (judgedDuel?'Réponse A'"),
+      'ouverture duel affichée avec chips neutres');
+    // l'export MD exclut l'ouverture
+    assert.ok(src.includes("m.r==='d' && m.p!=='opening'){ md+="),
+      'ouverture exclue de l\'export MD');
+  });
+
+  await t('ouverture (bonus) : colonne présente, 104 duel porte 2 répliques A;;B', async () => {
+    const fs2 = require('fs');
+    const srcC = fs2.readFileSync('api/chat.js', 'utf8');
+    eval(srcC.slice(srcC.indexOf('function parseCSV'), srcC.indexOf('// --- Prompts externalisés')));
+    const rows2 = parseCSV(fs2.readFileSync('content/defis.csv', 'utf8'));
+    assert.ok(rows2.every(r => 'ouverture' in r), 'colonne ouverture sur toutes les lignes');
+    const d104 = rows2.find(r => r.id === '104');
+    assert.ok(d104 && d104.ouverture.includes(';;'), '104 : ouverture duel avec séparateur A;;B');
+    // non-régression : la grande majorité des défis n'ont PAS d'ouverture (bonus)
+    const withOpening = rows2.filter(r => (r.ouverture || '').trim());
+    assert.ok(withOpening.length >= 1 && withOpening.length < rows2.length, 'ouverture reste optionnelle');
+  });
+
+  await t('defis.csv : 25 défis, 4 niveaux couverts, duel complet', async () => {
     const src = fs.readFileSync('api/chat.js', 'utf8');
     const fn = src.slice(src.indexOf('function parseCSV'), src.indexOf('// --- Prompts externalisés'));
     eval(fn);
     const rows = parseCSV(fs.readFileSync('content/defis.csv', 'utf8'));
-    assert.equal(rows.length, 24);
+    assert.equal(rows.length, 25);
     assert.deepEqual([...new Set(rows.map(r => r.niveau))].sort(), ['1', '2', '3', '4']);
     const duel = rows.find(r => r.mode === 'duel');
     assert.ok(duel && duel.sim && duel.sim2 && duel.contexte_ia);
@@ -402,8 +588,10 @@ const fs = require('fs');
     assert.ok(rot && rot.data.includes('|'), 'rotation data (image|motMystere)');
     const intr = rows.find(r => r.mode === 'intrus');
     assert.ok(intr && 'urls_visuels' in intr && 'index_intrus' in intr && 'legendes' in intr && !('legende_intrus' in intr), 'colonnes intrus simplifiées');
-    const fin = rows.find(r => r.final === '1');
-    assert.ok(fin && fin.id === 'agence' && fin.chrono === '30', 'défi final chronométré');
+    const fin = rows.find(r => r.id === '401');
+    assert.ok(fin && fin.final === '1' && fin.chrono === '30', 'défi final 401 chronométré');
+    const finals = rows.filter(r => r.final === '1').map(r => r.id);
+    assert.ok(finals.includes('107') && finals.includes('401'), 'chaque palier peut avoir son final');
     assert.ok(rows.every(r => 'chrono' in r && 'final' in r), 'colonnes chrono/final');
     assert.ok(rows.every(r => r.objectif && r.duree));
   });

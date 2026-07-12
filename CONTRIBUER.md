@@ -56,13 +56,48 @@ SharePoint/Drive, qui ouvre une page et non l'image.
 
 Pour `prompt` et `duel`, laisser `data` vide.
 
-**Le Juge (défis `prompt`, colonne `juge=1`)** - pour que la validation soit
-méritée et non déclarative : ajoute dans ton fichier `.md` un titre
-`# CRITÈRES DU JUGE` suivi des critères en français libre (ce bloc reste secret,
-jamais montré en discussion). Au clic sur « Valider », l'IA-Juge audite le
-**dernier** prompt du voyageur : critères remplis → tampon ; sinon → rapport
-d'audit expliquant l'ingrédient manquant, et on itère. Modèle : `bcn1.md`
-(sections MISSION / CONFIGURATION DE L'ASSISTANT / CRITÈRES DU JUGE).
+**Deux familles de défis de prompt :**
+
+- **`prompt` (standard)** — le voyageur discute avec l'IA dans le bac à sable,
+  puis clique sur « Valider » quand il le décide : **auto-validation manuelle**,
+  sans arbitrage. Parfait pour s'entraîner librement. Le `.md` ne contient que
+  la configuration de l'assistant (pas de section Juge).
+
+- **`prompt-juge`** — même expérience de discussion, mais « Valider » déclenche
+  un **audit automatique** par l'IA-Juge, qui analyse le **dernier** prompt du
+  voyageur selon des critères secrets. Pour créer ce type : mets `prompt-juge`
+  dans la colonne `mode`, et ajoute dans le `.md` un titre `# CRITÈRES DU JUGE`
+  suivi des critères en français libre (ce bloc reste **secret**, jamais montré
+  en discussion). Critères remplis → tampon ; sinon → rapport d'audit expliquant
+  ce qui manque, et on itère. Modèle : `bcn1.md` (sections MISSION /
+  CONFIGURATION DE L'ASSISTANT / CRITÈRES DU JUGE).
+
+  **Écrire des critères que le Juge applique de façon fiable** (important pour
+  une expérience gratifiante et non aléatoire) :
+  - **Numérote** chaque critère (1., 2., 3.) et vise 2 à 4 critères, pas plus.
+  - Donne pour chacun **2-3 exemples concrets entre guillemets** — le Juge s'en
+    sert de repères (« de 14h à 18h », « petit budget », « à pied »).
+  - Formule chaque critère comme une **présence à vérifier** (« le prompt doit
+    contenir une contrainte de temps »), pas comme un jugement subjectif
+    (« le prompt doit être bien écrit » — trop flou, résultats imprévisibles).
+  - Le Juge est réglé pour être **indulgent sur la forme** : un critère compte
+    dès qu'il est présent, même formulé autrement. Écris donc des critères
+    *fonctionnels* (une info attendue), pas *littéraux* (un mot exact imposé).
+  - Le rapport d'audit est automatiquement **encourageant** : il salue ce qui va,
+    nomme ce qui manque, et donne un indice — tu n'as pas à le rédiger, juste à
+    fournir des critères clairs.
+
+**L'ouverture (colonne `ouverture`, bonus optionnel)** — une réplique d'accueil
+qui s'affiche dès l'ouverture du défi, avant même que le voyageur écrive. Pour
+les défis de rédaction (`prompt`, `prompt-juge`, `duel`). Aucun appel IA : c'est
+un texte fixe que tu écris, affiché avec un fondu et mémorisé (il reste au
+rafraîchissement). Laisse la colonne vide → aucun changement, le défi démarre
+sur un fil blanc comme aujourd'hui.
+- *prompt / prompt-juge* : une seule réplique (l'hôte accueille le voyageur).
+- *duel* : **chaque IA a sa propre réplique**, séparées par `;;` dans la cellule
+  (`Réplique de A;;Réplique de B`). Sans `;;`, la même réplique s'affiche des
+  deux côtés. ⚠ En duel départagé, garde des répliques **neutres** qui ne
+  trahissent pas laquelle est fiable (l'anonymat A/B fait partie du jeu).
 
 **Le duel à départage (colonne `gagnant` = `a` ou `b`)** - écris deux system
 prompts (`x_a.md;x_b.md`) dont UN volontairement piégeur (hallucination
