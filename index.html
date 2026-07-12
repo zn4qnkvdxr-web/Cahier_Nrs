@@ -1327,13 +1327,16 @@ function runSplash(done){
 
 /* --- PWA : enregistrement du service worker (jamais en mode démo file://) --- */
 if (CONFIG.FEATURES && CONFIG.FEATURES.PWA && 'serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
+  // Un SW contrôle-t-il DÉJÀ la page à l'enregistrement ? Si oui, une future
+  // activation = vraie mise à jour → reload justifié. Sinon, c'est la PREMIÈRE
+  // installation → surtout PAS de reload (sinon la 1re visite se rafraîchit seule).
+  const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('sw.js').then((reg)=>{
-    // Nouvelle version détectée : elle s'active immédiatement (skipWaiting),
-    // et on recharge une seule fois pour servir la coquille à jour sans double-visite.
     reg.addEventListener('updatefound', ()=>{
       const sw=reg.installing; if(!sw) return;
       sw.addEventListener('statechange', ()=>{
-        if(sw.state==='activated' && navigator.serviceWorker.controller && !window.__cvReloaded){
+        if(sw.state==='activated' && hadController && !window.__cvReloaded){
+          // recharge une seule fois pour servir la coquille à jour, sans double-visite
           window.__cvReloaded=true; location.reload();
         }
       });
