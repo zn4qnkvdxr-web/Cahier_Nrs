@@ -4,7 +4,7 @@
   "private": true,
   "description": "Cahier de vacances IA — mini-site interne, zéro coût (Vercel + Mistral/Gemini + Google Sheet)",
   "engines": {
-    "node": ">=18"
+    "node": "22.x"
   },
   "scripts": {
     "test": "node test/e2e.test.js"
