@@ -17,45 +17,6 @@ id,niveau,mode,tag,titre,objectif,duree,pitch,intro,mission,hint,ex,sim,sim2,dat
  
 
  Tu veux que je t'ajoute des adresses précises ?",,,,,,,,,,,bcn1.md
-202,2,prompt,Escale 02,"Barcelone, 2 semaines",Passer de la demande ponctuelle à la conception d'un agent.,18 min,"Même décor, autre ambition : conçois l'agent qui prépare tout le séjour à ta place.","Cette fois tu pars deux semaines. Plutôt que de tout demander à la main, tu vas concevoir le raisonnement d'un petit agent : il prend tes contraintes et produit un plan complet, jour par jour. On esquisse ici - on branchera n8n en atelier de septembre.","Décris, étape par étape, la logique d'un agent 'organisateur de séjour'. Quelles entrées ? Quelles étapes de traitement ? Quel livrable en sortie ? Fais-le raisonner à voix haute.",Pense en chaîne : déclencheur → entrées → étapes → sortie.,"Agis comme un agent organisateur de séjour. Entrées : dates, budget, ville, centres d'intérêt. Décompose ta logique en étapes (collecte, priorisation, planification, mise en forme) puis produis un planning sur 14 jours. Explique chaque étape avant de la faire.","Logique de l'agent « Organisateur de séjour » :
- 
-
- 1. ENTRÉES - dates (14 j), budget, ville, intérêts, rythme.
- 2. COLLECTE - lister sites, quartiers, événements sur la période.
- 3. PRIORISATION - scorer selon intérêts + budget + distance.
- 4. PLANIFICATION - répartir sur 14 jours, éviter les doublons, garder du mou.
- 5. MISE EN FORME - restituer un planning + budget estimé par jour.
- 
-
- → Sortie : un tableau jour/matin/après-midi/soir, avec coût prévisionnel.
- 
-
- En n8n, l'étape 2 serait un nœud de recherche, l'étape 5 un nœud de génération de doc. On câble ça ensemble en septembre.",,,,,,,,,,,bcn2.md
-203,2,prompt,Escale 04,Repeindre le salon,Transformer un besoin en logique entrées → calcul → sortie.,16 min,"Chiffrer un chantier : conçois un mini-outil qui estime surface, pots et budget.",Un projet perso concret : repeindre une pièce. On dépasse le simple conseil - tu vas concevoir la logique d'un estimateur qui prend des dimensions et sort un budget.,"Conçois le raisonnement d'un 'estimateur peinture' : quelles entrées (dimensions, portes, fenêtres), quel calcul (surface nette, nombre de couches), quelle sortie (litres, pots, coût) ?","Un estimateur, c'est entrées → formule → sortie chiffrée. Explicite chaque maillon.","Agis comme un estimateur de chantier peinture. Entrées : L×l×h de la pièce, nombre de portes/fenêtres, nombre de couches. Détaille ton calcul de surface nette, puis déduis les litres, le nombre de pots et un coût estimé.","Estimateur peinture - logique :
- 
-
- 1. ENTRÉES - L, l, h ; nb portes ; nb fenêtres ; nb couches.
- 2. SURFACE MURS - 2×(L+l)×h.
- 3. DÉDUCTIONS - −2 m²/porte, −1,5 m²/fenêtre.
- 4. SURFACE À PEINDRE - (murs nets) × nb couches.
- 5. LITRES - surface ÷ 10 (rendement moyen).
- 6. SORTIE - litres → pots (2,5 L) → coût (× prix/pot).
- 
-
- Ex. pièce 5×4×2,5, 1 porte, 2 fenêtres, 2 couches → ≈ 15 L → 6 pots → budget estimé.
- 
-
- En atelier : on transforme ça en formulaire n8n qui recrache une fiche PDF.",,,,,,,,,,,paint.md
-204,2,prompt,Escale 05 · niveau +,Survivre à la rentrée,Concevoir un déclencheur et une synthèse automatique.,15 min,Le retour approche : automatise le récap qui te remet en selle en 5 minutes.,"Septembre arrive. Plutôt que de subir la reprise, conçois l'assistant qui déclenche ton récap : ce qui a bougé, ce qui t'attend, tes priorités de la semaine.","Décris un agent 'reprise de rentrée' : son déclencheur, les sources qu'il consulte, et la fiche de synthèse qu'il produit chaque lundi.",Déclencheur → sources → synthèse. C'est le squelette de tout agent utile.,"Conçois un agent 'reprise du lundi'. Déclencheur : chaque lundi 8h. Sources : mails non lus, agenda de la semaine, tâches en retard. Sortie : une fiche de 5 lignes avec mes 3 priorités. Détaille la logique.","Agent « Reprise du lundi » :
- 
-
- DÉCLENCHEUR - chaque lundi, 8h00.
- SOURCES - mails non lus (7 j), agenda semaine, tâches en retard.
- TRAITEMENT - regrouper par sujet, repérer l'urgent, dédoublonner.
- SORTIE - fiche : « Cette semaine tu as 3 réunions clés, 2 échéances, et voici tes 3 priorités. »
- 
-
- En n8n : nœud déclencheur planifié → nœuds sources → nœud IA de synthèse → envoi. On l'assemble ensemble à la rentrée.",,,,,,,,,,,rentree.md
 205,2,duel,Escale 06 · duel,"Deux IA, un match",Comparer deux IA sur la même consigne et garder l'esprit critique.,15 min,"Même prompt, deux IA : compare les réponses et apprends à ne rien croire sur parole.","Toutes les IA ne répondent pas pareil : ton, structure, précision… et parfois des erreurs différentes. Ici, ton prompt part vers deux modèles en même temps - à toi de comparer. C'est le réflexe critique le plus utile de l'été.","Envoie le même prompt aux deux IA, compare leurs réponses, puis désigne dans le fil laquelle est fiable. Bon choix = tampon. Mauvais choix = relance un prompt plus discriminant.","L'assurance n'est pas une preuve : demande des sources, des chiffres vérifiables, un format précis.","Liste les 5 incontournables de Barcelone avec un enfant de 6 ans, avec pour chacun le meilleur créneau horaire et une astuce anti-file.","Voici 5 incontournables familiaux à Barcelone :
  
 
@@ -180,3 +141,13 @@ Activités gourmandes
 - Offrir un petit cadeau souvenir (ex. : photo de groupe imprimée).
 - Sonder les collègues pour choisir l’activité ensemble.
 Question pour toi : As-tu déjà une idée du type d’activité qui pourrait plaire à ton équipe ? Ou veux-tu que je t’aide à affiner en fonction de votre localisation ou de vos centres d’intérêt ?",,,,,,,,,,,Organiser une demi-journée de vacances entre collègues.
+403,4,intrus,intrus,"Vraie photo, fausse photo",Repérer les signatures visuelles d'une image générée par IA.,6 min,"Trois cartes postales, une seule sort d'une IA : sauras-tu la démasquer ?","Les images générées sont partout - et souvent bluffantes. Mais elles laissent des indices : lumière incohérente, doublons impossibles, textes déformés. À toi d'inspecter.","Tape chaque visuel pour lire son indice, puis désigne l'intrus généré par IA.","Zoome mentalement sur la lumière, les reflets et les lettres.",,,,,"https://i.postimg.cc/T3yL18Q4/microsoft-copilot-tx-Zv4HQJRp-E-unsplash.jpg|
+https://i.postimg.cc/ZKsvJYFm/planet-volumes-Jp6Dcr-UF7n8-unsplash.jpg|
+https://i.postimg.cc/wT4R9x5Q/rafael-peier-Nu3Jh-QCK3TQ-unsplash.jpg",0,Légende image 01|Légende image 02|Légende image 03,,,,,,
+404,4,intrus,intrus,"Vraie photo, fausse photo",Repérer les signatures visuelles d'une image générée par IA.,6 min,"Trois cartes postales, une seule sort d'une IA : sauras-tu la démasquer ?","Les images générées sont partout - et souvent bluffantes. Mais elles laissent des indices : lumière incohérente, doublons impossibles, textes déformés. À toi d'inspecter.","Tape chaque visuel pour lire son indice, puis désigne l'intrus généré par IA.","Zoome mentalement sur la lumière, les reflets et les lettres.",,,,,"https://i.postimg.cc/T3yL18Q4/microsoft-copilot-tx-Zv4HQJRp-E-unsplash.jpg|
+https://i.postimg.cc/ZKsvJYFm/planet-volumes-Jp6Dcr-UF7n8-unsplash.jpg|
+https://i.postimg.cc/wT4R9x5Q/rafael-peier-Nu3Jh-QCK3TQ-unsplash.jpg",1,Légende image 01|Légende image 02|Légende image 03,,,,,,
+405,4,intrus,intrus,"Vraie photo, fausse photo",Repérer les signatures visuelles d'une image générée par IA.,6 min,"Trois cartes postales, une seule sort d'une IA : sauras-tu la démasquer ?","Les images générées sont partout - et souvent bluffantes. Mais elles laissent des indices : lumière incohérente, doublons impossibles, textes déformés. À toi d'inspecter.","Tape chaque visuel pour lire son indice, puis désigne l'intrus généré par IA.","Zoome mentalement sur la lumière, les reflets et les lettres.",,,,,"https://i.postimg.cc/T3yL18Q4/microsoft-copilot-tx-Zv4HQJRp-E-unsplash.jpg|
+https://i.postimg.cc/ZKsvJYFm/planet-volumes-Jp6Dcr-UF7n8-unsplash.jpg|
+https://i.postimg.cc/wT4R9x5Q/rafael-peier-Nu3Jh-QCK3TQ-unsplash.jpg",2,Légende image 01|Légende image 02|Légende image 03,,,,,,
+406,4,rotation,rotation,Le portrait-robot en morceaux,"Reconstituer l'image, puis nommer le concept IA qu'elle illustre.",6 min,"Neuf morceaux en vrac, un mot mystère au bout : reconstruis, puis devine.","Deux temps : d'abord tes doigts - tape les cases pour pivoter et remettre l'image à l'endroit. Ensuite ta tête - un champ s'ouvre et l'IA arbitre ta réponse au mot mystère, avec des indices si tu chauffes.","Reconstitue l'image, puis nomme le concept IA illustré. Le tampon tombe quand l'IA valide ta réponse.","Il travaille pour toi, étape par étape, sans que tu tapes chaque commande…",,,,https://i.postimg.cc/ZKsvJYFm/planet-volumes-Jp6Dcr-UF7n8-unsplash.jpg|fleur,,,,,,,,,
