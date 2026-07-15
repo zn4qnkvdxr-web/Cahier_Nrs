@@ -487,6 +487,28 @@ const fs = require('fs');
     assert.ok(src.includes("d.mode !== 'prompt-juge'"), 'audit réservé au type dédié');
   });
 
+  await t('gemini : thinking désactivé sur 2.5-flash uniquement (anti-troncature)', async () => {
+    const bodyOf = (c) => { try { return JSON.parse(c.opts.body); } catch (e) { return {}; } };
+    // défaut (gemini-2.5-flash) : thinkingBudget 0 envoyé, config intacte
+    delete process.env.GEMINI_MODEL;
+    NET.captured = [];
+    let r = makeRes();
+    await chat(makeReq({ body: { prompt: 'test', capsule: '212', provider: 'gemini' }, ip: '10.9.0.1' }), r);
+    assert.equal(r._.code, 200);
+    const g1 = NET.captured.filter((c) => c.url.includes('generativelanguage')).map(bodyOf).pop();
+    assert.equal(g1.generationConfig.thinkingConfig.thinkingBudget, 0, 'budget 0 sur 2.5-flash');
+    assert.equal(g1.generationConfig.maxOutputTokens, 700, 'tokens intacts');
+    // surcharge hors famille 2.5-flash : requête strictement d'origine
+    process.env.GEMINI_MODEL = 'gemini-2.5-pro';
+    NET.captured = [];
+    r = makeRes();
+    await chat(makeReq({ body: { prompt: 'test', capsule: '212', provider: 'gemini' }, ip: '10.9.0.2' }), r);
+    const g2 = NET.captured.filter((c) => c.url.includes('generativelanguage')).map(bodyOf).pop();
+    assert.ok(!g2.generationConfig.thinkingConfig, 'aucun thinkingConfig hors 2.5-flash');
+    assert.equal(g2.generationConfig.maxOutputTokens, 700);
+    delete process.env.GEMINI_MODEL;
+  });
+
   await t('longueur : capLength borne à 900 car, coupe à la phrase, jamais un mot', async () => {
     const src = require('fs').readFileSync('api/chat.js', 'utf8');
     eval(src.slice(src.indexOf('const MAX_REPLY_CHARS'), src.indexOf('async function callMistral')));
