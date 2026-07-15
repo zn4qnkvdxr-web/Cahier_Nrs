@@ -409,7 +409,16 @@ async function callGemini(userPrompt, systemPrompt, historyMsgs) {
         role: m.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: m.content }],
       })),
-      generationConfig: { maxOutputTokens: 700, temperature: 0.6 },
+      // Gemini 2.5 Flash : la réflexion interne ("thinking") est active par défaut
+      // et ses tokens sont décomptés de maxOutputTokens → réponses coupées alors
+      // que le texte visible est court. On la désactive (budget 0) : les 700
+      // tokens vont intégralement à la réponse visible. Garde STRICTE : champ
+      // envoyé uniquement aux modèles 2.5-flash* (qui l'acceptent) ; 2.5-pro le
+      // refuse, et tout autre modèle surchargé via GEMINI_MODEL reste intact.
+      generationConfig: Object.assign(
+        { maxOutputTokens: 700, temperature: 0.6 },
+        model.includes('2.5-flash') ? { thinkingConfig: { thinkingBudget: 0 } } : {}
+      ),
     }),
   });
   if (!r.ok) {
