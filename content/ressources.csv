@@ -1,14 +1,7 @@
 type,tag,titre,desc,url
-lien,Outil,Recommandations,"Une page, les bons réflexes à garder en tête. Pour rester maître de ses données.",https://norsysgroupe.sharepoint.com/:w:/r/sites/Cahierdevacances-Dfit2026/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7B703d86b5-b37f-4f0e-8734-d091d3b6c1cd%7D&wdExp=TEAMS-TREATMENT&web=1&TeamsCID=00682103-a21c-4787-88e6-7d0465e47aae 
-lien,Séminaire,Design structurel de prompt,"Le support du séminaire, pour retrouver la méthode complète.",https://companion-app-nrs.vercel.app
-lien,Outil,Anti-sèche du bon prompt,".Une page, les réflexes. À garder sous le coude pendant les défis.",https://help.openai.com/fr-fr/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api
-lien,Outil,Glossaire,Le jargon IA décodé en quelques pages,https://norsysgroupe.sharepoint.com/sites/Cahierdevacances-Dfit2026/Documents%20partages/Forms/AllItems.aspx?viewid=24825a6b%2Daca9%2D4eaf%2Da3bb%2D7436ccecd45d&id=%2Fsites%2FCahierdevacances%2DDfit2026%2FDocuments%20partages%2FGlossaire%2Epdf&parent=%2Fsites%2FCahierdevacances%2DDfit2026%2FDocuments%20partages
-lien,Aller + loin,Découvrir n8n,Le point de départ pour l’automatisation - utile avant les ateliers de septembre.,https://www.data-bird.co/blog/n8n
-lien,Aller + loin,Boite à outils,"Le tour des outils IA norsys, pour choisir le bon selon la situation",https://norsysgroupe.sharepoint.com/sites/HarmonisationIA?or=WORD-WEB.BODY.NT&ct=1783876816839
-lien,Outil,Histoire de l'IA,Un petit tour dans le passé pour avancer dans le futur,https://norsysgroupe.sharepoint.com/sites/Cahierdevacances-Dfit2026/Documents%20partages/Forms/AllItems.aspx?viewid=24825a6b%2Daca9%2D4eaf%2Da3bb%2D7436ccecd45d&id=%2Fsites%2FCahierdevacances%2DDfit2026%2FDocuments%20partages%2FGlossaire%2Epdf&parent=%2Fsites%2FCahierdevacances%2DDfit2026%2FDocuments%20partages
-,,,,
-,,,,
-,,,,
-,,,,
-,,,,
-,,,, 
+"doc","Séminaire","Design structurel de prompt","Le support C01-C06 du séminaire, pour retrouver la méthode complète.","#"
+"doc","Guide","Anti-sèche du bon prompt","Une page, les 6 réflexes. À garder sous le coude pendant les défis.","#"
+"lien","Outil","Le bac à sable, en grand","Le chat IA en pleine page, sans défi imposé, pour expérimenter librement.","#"
+"lien","Aller + loin","Découvrir n8n","Le point de départ pour l’automatisation - utile avant les ateliers de septembre.","#"
+"doc","Exemples","Galerie de prompts maison","Des prompts réels partagés par les collègues, commentés et réutilisables.","#"
+"lien","Rentrée","S’inscrire au webinaire","Réserve ta place pour la restitution de septembre et les ateliers pratiques.","#"

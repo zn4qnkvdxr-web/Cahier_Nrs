@@ -309,6 +309,12 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
 .cap-top .back:hover{background:var(--paper-2)}
 .cap-top .t{font:700 .8rem 'Space Mono',monospace;color:var(--ink-soft);letter-spacing:.06em}
 .cap-body{max-width:720px;margin:0 auto;padding:32px 20px 40px}
+/* Largeur de référence UNIVERSELLE des défis : sur desktop/tablette, TOUS les
+   défis s'alignent sur la largeur de la grille d'accueil (référence : le rendu
+   duel / prompt-juge / intrus). Le contenu des jeux calibrés (quiz, puzzle,
+   rotation) reste centré et inchangé : seul le conteneur global s'élargit.
+   Mobile (<760px) : strictement intact. */
+@media(min-width:760px){ #capBody{max-width:1120px} }
 /* --- Socle jeux : zone de manipulation ample, états charte Norsys --- */
 .game-box{background:#fff;border:var(--bord);border-radius:var(--r-md);
   box-shadow:5px 5px 0 var(--ink);overflow:hidden;margin-top:22px}
@@ -383,7 +389,10 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
 /* Intrus : galerie rigide (object-fit), légendes et CTA à hauteur réservée = zéro saut de page */
 .in-grid{display:grid;grid-template-columns:1fr;gap:14px} /* mobile : liste verticale pleine largeur */
 @media(min-width:700px){.in-grid{grid-template-columns:1fr 1fr;gap:12px}}
-@media(min-width:1000px){.in-grid{grid-template-columns:1fr 1fr 1fr}}
+@media(min-width:1000px){.in-grid{grid-template-columns:1fr 1fr 1fr;gap:18px}}
+/* Visuels (intrus, rotation) : ratio et proportions d'origine STRICTEMENT
+   conservés - aucune contrainte de hauteur ; si le contenu dépasse l'écran,
+   le défilement vertical classique est le comportement attendu. */
 .in-card{margin:0;cursor:pointer;border:3px solid var(--ink);border-radius:var(--r-sm);
   overflow:hidden;background:#fff;transition:border-color .15s,box-shadow .15s}
 .in-imgbox{aspect-ratio:4/3;background:var(--paper-2)}
@@ -416,12 +425,12 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
   animation:shakeX .3s ease}
 .qz-opt.lock{opacity:.45;pointer-events:none}
 
-/* Duel dans le fil : colonnes parallèles desktop, empilement mobile/tablette */
+/* Duel dans le fil : empilement vertical chronologique sur TOUS les écrans
+   (le côte-à-côte desktop nuisait à la lisibilité - aligné sur le mobile) */
 .msg-duel{display:grid;grid-template-columns:1fr;gap:10px;align-self:stretch}
 .msg-duel .msg{max-width:none}
 .msg-duel .msg.a:first-child .who{color:var(--nrs-teal)}
 .msg-duel .msg.a:last-child .who{color:var(--nrs-orange)}
-@media(min-width:760px){ .msg-duel{grid-template-columns:1fr 1fr} }
 /* Barre de validation : statique, dans le flux, sous la zone d'action du défi */
 .cap-finish{margin:26px 0 0;padding:0 0 calc(10px + env(safe-area-inset-bottom));text-align:center}
 .cap-finish .btn{width:100%;max-width:400px;justify-content:center}
@@ -460,7 +469,8 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
 /* ═══ Mode messagerie : fil, bulles, indicateur de réflexion ═══ */
 .sb-wrap{position:relative}                    /* ancre le bouton « aller en bas » */
 .sb-thread{display:flex;flex-direction:column;gap:12px;padding:16px 16px 8px;
-  max-height:52vh;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:auto}
+  max-height:58vh;max-height:58dvh;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:auto}
+@media(min-width:760px){ .sb-thread{max-height:66vh} }
 .sb-thread:empty{display:none}
 .to-bottom{position:absolute;right:14px;bottom:12px;z-index:8;width:38px;height:38px;
   border-radius:50%;border:2.5px solid var(--ink);background:var(--paper);
@@ -475,7 +485,9 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
   text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
 .msg .mt{white-space:pre-wrap;word-break:break-word}
 .msg.u{align-self:flex-end;background:var(--fill-butter);border-radius:14px 14px 4px 14px}
-.msg.a{align-self:flex-start}
+/* Réponses IA : pleine largeur du fil sur tous les écrans - rendu aligné sur le
+   duel (.msg-duel), pour une lisibilité identique dans prompt et prompt-juge. */
+.msg.a{align-self:stretch;max-width:none}
 .msg.note{align-self:stretch;max-width:none;background:transparent;border-style:dashed;
   box-shadow:none;font-size:.86rem;color:var(--ink-soft)}
 /* Juge : rapport d'audit + scan · Duel : départage */
@@ -1072,7 +1084,7 @@ function armDuelChoice(c){
   z.innerHTML='<span class="mt">⚖️ Une de ces deux réponses est fiable, l\'autre non. Laquelle valides-tu ?</span>'+
     '<span class="pick-btns"><button class="btn btn-primary" type="button" data-p="a">Réponse A</button>'+
     '<button class="btn btn-primary" type="button" data-p="b">Réponse B</button></span>';
-  th.appendChild(z); bubbleIn(z); threadScroll(true);
+  th.appendChild(z); bubbleIn(z); peekReveal(z);
   z.querySelectorAll('button').forEach(b=>b.onclick=()=>{
     if(z.dataset.done) return;
     z.dataset.done='1';
@@ -2180,18 +2192,6 @@ function threadScroll(smooth){
 }
 /* Suivi doux de la croissance d'un message, image par image (rAF = zéro à-coup),
    suspendu si le voyageur remonte volontairement le fil. */
-function threadPin(){
-  const th=threadEl(); if(!th) return ()=>{};
-  let stick=true, raf=0, prev=th.scrollHeight;
-  const onScroll=()=>{ stick=nearBottom(th); syncToBottomBtn(); };
-  th.addEventListener('scroll', onScroll, {passive:true});
-  (function loop(){
-    if(stick && th.scrollHeight!==prev){ prev=th.scrollHeight; th.scrollTop=th.scrollHeight; }
-    raf=requestAnimationFrame(loop);
-  })();
-  return ()=>{ cancelAnimationFrame(raf); th.removeEventListener('scroll', onScroll); };
-}
-
 /* ═══ Bouton flottant « aller au dernier message » ═══ */
 function toBottomBtn(){ return document.getElementById('toBottom'); }
 function syncToBottomBtn(){
@@ -2203,6 +2203,22 @@ function syncToBottomBtn(){
     if(show){ b.classList.add('show'); gsap.fromTo(b,{opacity:0,y:8},{opacity:1,y:0,duration:.25,ease:'power2.out'}); }
     else gsap.to(b,{opacity:0,y:8,duration:.2,ease:'power2.in',onComplete:()=>b.classList.remove('show')});
   } else { b.style.opacity=show?'1':'0'; b.classList.toggle('show',show); }
+}
+
+/* Scroll intelligent : léger défilement de compensation qui révèle le DÉBUT
+   d'une nouvelle bulle (≈ 2-3 lignes) juste au-dessus du bloc de saisie.
+   Ne descend jamais tout en bas, ne remonte jamais ; la flèche ↓ reste le
+   moyen manuel d'aller au dernier message. */
+function peekReveal(el){
+  const th=threadEl(); if(!th||!el){ syncToBottomBtn(); return; }
+  const PEEK=110; /* hauteur révélée : chip + 2-3 lignes */
+  const maxScroll=Math.max(0, th.scrollHeight - th.clientHeight);
+  const top=th.scrollTop + (el.getBoundingClientRect().top - th.getBoundingClientRect().top);
+  const target=Math.min(top - th.clientHeight + PEEK, maxScroll);
+  if(target > th.scrollTop + 4){
+    th.scrollTo({top:target, behavior: reduce ? 'auto' : 'smooth'});
+  }
+  syncToBottomBtn();
 }
 function bubbleIn(el){
   if(window.gsap && !reduce) gsap.from(el,{opacity:0,y:20,duration:.4,ease:'power2.out'});
@@ -2218,13 +2234,19 @@ function addMsg(role, text, chip){
   if(chip){ const w=document.createElement('span'); w.className='who'; w.textContent=chip; el.appendChild(w); }
   const t=document.createElement('span'); t.className='mt'; t.textContent=text||'';
   el.appendChild(t);
-  th.appendChild(el); bubbleIn(el); threadScroll(true);
+  th.appendChild(el); bubbleIn(el);
+  /* Scroll intelligent : le message du voyageur suit le fil ; une note système
+     (audit, verdict, indice) est révélée en douceur ; les bulles restaurées et
+     l'ouverture ne déclenchent aucun défilement (affichage initial déjà correct). */
+  if(role==='u') threadScroll(true);
+  else if(role==='note') peekReveal(el);
+  else syncToBottomBtn();
   return el;
 }
 function addDuelRow(){
   const th=threadEl(); if(!th) return null;
   const row=document.createElement('div'); row.className='msg-duel';
-  th.appendChild(row); bubbleIn(row); threadScroll(true);
+  th.appendChild(row); bubbleIn(row); syncToBottomBtn();
   return row;
 }
 function aiBubble(parent, chip){
@@ -2241,15 +2263,15 @@ function startThinking(el){
     el._dots=gsap.to(t.querySelectorAll('.dots i'),
       {y:-5,duration:.4,ease:'sine.inOut',stagger:.13,repeat:-1,yoyo:true});
   }
-  threadScroll();
+  peekReveal(el);
 }
 async function settleAnswer(el, text){
   if(el._dots){ el._dots.kill(); el._dots=null; }
   const t=el.querySelector('.mt'); t.textContent='';
-  const unpin=threadPin();          /* le fil suit la croissance, sans à-coups */
-  try{ await revealText(t, text, ()=>{ /* suivi assuré par threadPin (rAF) */ }); }
-  finally{ unpin(); }
-  threadScroll(true);
+  /* Compensation douce : le début de la réponse (2-3 lignes) est révélé juste
+     au-dessus de la saisie ; la flèche ↓ reste le moyen d'aller tout en bas. */
+  await revealText(t, text, ()=>syncToBottomBtn());
+  peekReveal(el);
 }
 
 async function duelAnswer(c){

@@ -27,7 +27,7 @@ function rateLimited(ip) {
 const SYSTEM_PROMPT = [
   "Tu es l'assistant pédagogique du « Cahier de vacances IA », un parcours d'été",
   "interne pour apprendre à utiliser l'IA (prompts, automatisation, agents).",
-  "Réponds toujours en français, avec bienveillance et concision (300 mots max).",
+  "Réponds toujours en français, avec bienveillance. Sois CONCIS : 120 mots maximum, en allant à l'essentiel, sans remplissage ni redites.",
   "Encourage l'itération : si le prompt de l'utilisateur est vague, réponds puis",
   "suggère une amélioration concrète de sa formulation.",
   "Reste dans le cadre pédagogique : décline poliment toute demande manifestement",
@@ -348,6 +348,22 @@ module.exports = async (req, res) => {
   }
 };
 
+// Garde-fou de longueur : filet de sécurité si une IA dépasse malgré la consigne.
+// Coupe proprement à la fin de la dernière phrase complète sous la limite (jamais
+// au milieu d'un mot), et n'ajoute « … » que si on a réellement tronqué.
+const MAX_REPLY_CHARS = 900;
+function capLength(text) {
+  const t = String(text || '').trim();
+  if (t.length <= MAX_REPLY_CHARS) return t;
+  const slice = t.slice(0, MAX_REPLY_CHARS);
+  // dernière fin de phrase (. ! ? …) dans la tranche
+  const m = slice.match(/[\s\S]*[.!?…]/);
+  let out = m ? m[0] : slice.slice(0, slice.lastIndexOf(' ') > 0 ? slice.lastIndexOf(' ') : slice.length);
+  out = out.trim();
+  if (!/[.!?…]$/.test(out)) out += ' …';
+  return out;
+}
+
 async function callMistral(userPrompt, systemPrompt, historyMsgs) {
   const key = process.env.MISTRAL_API_KEY;
   if (!key) throw new Error('MISTRAL_API_KEY absente');
@@ -361,7 +377,7 @@ async function callMistral(userPrompt, systemPrompt, historyMsgs) {
       messages: [{ role: 'system', content: systemPrompt }].concat(
         historyMsgs || [{ role: 'user', content: userPrompt }]
       ),
-      max_tokens: 1500,
+      max_tokens: 700,
       temperature: 0.6,
     }),
   });
@@ -373,7 +389,7 @@ async function callMistral(userPrompt, systemPrompt, historyMsgs) {
     throw new Error(`Mistral HTTP ${r.status} - ${String(raw).slice(0, 300)}`);
   }
   const data = await r.json();
-  const text = data?.choices?.[0]?.message?.content;
+  const text = capLength(data?.choices?.[0]?.message?.content);
   if (!text) throw new Error('Réponse Mistral vide');
   return text;
 }
@@ -393,7 +409,7 @@ async function callGemini(userPrompt, systemPrompt, historyMsgs) {
         role: m.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: m.content }],
       })),
-      generationConfig: { maxOutputTokens: 1500, temperature: 0.6 },
+      generationConfig: { maxOutputTokens: 700, temperature: 0.6 },
     }),
   });
   if (!r.ok) {
@@ -402,9 +418,10 @@ async function callGemini(userPrompt, systemPrompt, historyMsgs) {
     throw new Error(`Gemini HTTP ${r.status} - ${rawError.slice(0, 300)}`);
   }
   const data = await r.json();
-  const text = (data?.candidates?.[0]?.content?.parts || [])
+  const textRaw = (data?.candidates?.[0]?.content?.parts || [])
     .map((p) => p.text || '')
     .join('');
+  const text = capLength(textRaw);
   if (!text) throw new Error('Réponse Gemini vide');
   return text;
 }

@@ -487,6 +487,22 @@ const fs = require('fs');
     assert.ok(src.includes("d.mode !== 'prompt-juge'"), 'audit réservé au type dédié');
   });
 
+  await t('longueur : capLength borne à 900 car, coupe à la phrase, jamais un mot', async () => {
+    const src = require('fs').readFileSync('api/chat.js', 'utf8');
+    eval(src.slice(src.indexOf('const MAX_REPLY_CHARS'), src.indexOf('async function callMistral')));
+    // court : inchangé
+    assert.equal(capLength('Salut. Ça va ?'), 'Salut. Ça va ?');
+    // long : sous la limite + fin propre
+    const capped = capLength('Phrase complète. '.repeat(80));
+    assert.ok(capped.length <= 900, 'borné à 900');
+    assert.ok(/[.!?…]$/.test(capped), 'finit sur une ponctuation');
+    // null : pas de crash
+    assert.equal(capLength(null), '');
+    // config : 700 tokens + 120 mots
+    assert.ok(src.includes('max_tokens: 700') && src.includes('maxOutputTokens: 700'), 'tokens plafonnés à 700');
+    assert.ok(src.includes('120 mots maximum'), 'instruction 120 mots');
+  });
+
   /* ─── Le Juge (action validate) ─── */
   await t('juge : [APPROUVE] → win:true, tag retiré du verdict', async () => {
     NET.mistral = 'approve';
