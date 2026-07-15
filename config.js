@@ -26,12 +26,16 @@ window.CV_CONFIG = {
 
   // « À propos » - l'équipe s'ajoute ici (aucun code à toucher)
   ABOUT: {
-    INTRO: "Ce cahier de vacances n'est pas une formation, il s'agit de petits exercices ludiques, pensés pour continuer à se familiariser avec l'IA générative, à son rythme et sans pression.Ce projet d'acculturation IA est porté par  Tarik, Eric, Virginie, Patrick, Virginia, Matthieu & Gertrude avec l'appui de Sophie REMAY et s'adresse à tous les collaborateurs, quel que soit leur métier.L'idée : garder le contact avec ces outils tout en s'amusant, pas de devenir expert en une semaine.",
+    INTRO: "Ce cahier de vacances a pour objectif de vous familiariser avec l'IA générative, garder le contact avec ces outils tout en s'amusant, pas de devenir expert en une semaine, dans un contexte ludique à votre rythme et sans pression. Ce cahier s'adresse à tous les collaborateurs, quel que soit leur métier.",
     TEAM: [
-      { nom: 'Ton prénom ici', role: 'Idée & produit' },
-      { nom: 'Ajoute-toi',     role: 'Contenu des escales' },
-      { nom: 'Et toi aussi',   role: 'Relecture & tests' },
+      { nom: 'Tarik', role: 'Conception produit et développement' },
+      { nom: 'Virginie', role: 'Idée, conception-rédaction et contenu des escales' },
+      { nom: 'Patrick', role: 'Contenu des escales' },
+      { nom: 'Eric', role: 'Contenu des escales' }, 
+      { nom: 'Matthieu', role: 'Contenu des escales' }, 
+      { nom: 'Gertrude', role: 'Contenu des escales, relecture & tests' },    
+      { nom: 'Virginia', role: 'Relecture & tests' },     
     ],
-    MENTION: "Une découverte à partager, une question, vos retours ? Écrivez-nous sur cahier_de_vacances_IA@norsys.fr",
+    MENTION: "Besoin d'un coup de pouce, une question, un retours ? Alors écrivez-nous sur cahier_de_vacances_IA@norsys.fr",
   },
 };
