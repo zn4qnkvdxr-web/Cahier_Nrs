@@ -351,7 +351,7 @@ module.exports = async (req, res) => {
 // Garde-fou de longueur : filet de sécurité si une IA dépasse malgré la consigne.
 // Coupe proprement à la fin de la dernière phrase complète sous la limite (jamais
 // au milieu d'un mot), et n'ajoute « … » que si on a réellement tronqué.
-const MAX_REPLY_CHARS = 2600;
+const MAX_REPLY_CHARS = 2800;
 function capLength(text) {
   const t = String(text || '').trim();
   if (t.length <= MAX_REPLY_CHARS) return t;
