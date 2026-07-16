@@ -13,7 +13,7 @@
  * ⚠ DÉPLOIEMENT : incrémenter VERSION à CHAQUE déploiement (voir DEPLOIEMENT.md).
  *   C'est ce numéro qui invalide l'ancien cache de coquille chez les visiteurs.
  */
-const VERSION = 'cv-ia-v52';
+const VERSION = 'cv-ia-v53';
 
 const SHELL = [
   '/',
