@@ -82,7 +82,7 @@ const fs = require('fs');
   await t('nominal : Mistral répond', async () => {
     NET.mistral = 'ok';
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: 'Biketrip-col2' }, ip: '10.0.0.1' }), res);
+    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: 'qcm1' }, ip: '10.0.0.1' }), res);
     assert.equal(res._.code, 200);
     assert.equal(res._.body.provider, 'mistral');
     assert.match(res._.body.text, /Mistral/);
@@ -91,7 +91,7 @@ const fs = require('fs');
   await t('quota Mistral 429 → bascule Gemini transparente', async () => {
     NET.mistral = '429';
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: 'Biketrip-col2' }, ip: '10.0.0.2' }), res);
+    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: 'qcm1' }, ip: '10.0.0.2' }), res);
     assert.equal(res._.code, 200);
     assert.equal(res._.body.provider, 'gemini');
   });
@@ -114,14 +114,14 @@ const fs = require('fs');
 
   await t('duel : provider=gemini imposé, sans bascule', async () => {
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Duel', capsule: 'duel-301', provider: 'gemini' }, ip: '10.0.0.5' }), res);
+    await chat(makeReq({ body: { prompt: 'Duel', capsule: 'duel-303', provider: 'gemini' }, ip: '10.0.0.5' }), res);
     assert.equal(res._.body.provider, 'gemini');
   });
 
   await t('duel : provider=mistral en panne → 502 (pas de bascule cachée)', async () => {
     NET.mistral = '429';
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Duel', capsule: 'duel-301', provider: 'mistral' }, ip: '10.0.0.6' }), res);
+    await chat(makeReq({ body: { prompt: 'Duel', capsule: 'duel-303', provider: 'mistral' }, ip: '10.0.0.6' }), res);
     assert.equal(res._.code, 502);
     assert.equal(res._.body.provider, 'mistral');
     NET.mistral = 'ok';
@@ -137,10 +137,12 @@ const fs = require('fs');
   await t('contexte_ia injecté côté serveur (capsule connue)', async () => {
     NET.captured.length = 0;
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Y', capsule: 'duel-301' }, ip: '10.0.0.8' }), res);
+    await chat(makeReq({ body: { prompt: 'Y', capsule: 'duel-303' }, ip: '10.0.0.8' }), res);
     const sent = JSON.parse(NET.captured[0].opts.body);
     assert.match(sent.messages[0].content, /Cadre du défi en cours/);
-    assert.match(sent.messages[0].content, /human-in-the-loop/);
+    /* zéro méta-prompting : la philosophie critique est bannie, l'immersion imposée */
+    assert.doesNotMatch(sent.messages[0].content, /human-in-the-loop|critique constructivement/, 'méta-prompting banni');
+    assert.match(sent.messages[0].content, /JAMAIS de méta-commentaire/, 'consigne immersive présente');
   });
 
   await t('capsule inconnue → system prompt générique (pas d\'injection)', async () => {
@@ -283,7 +285,7 @@ const fs = require('fs');
     global.fetch = async (url) => {
       if (String(url).includes('sheet.local')) return { ok: true, status: 200, text: async () =>
         'code,etat_json,maj\n' +
-        '"ETE-ZZZZZ","{""name"":""Zoe"",""done"":[""Biketrip-col1"",""DEFI_SUPPRIME"",""faute_frappe""]}","2026-07-01 10:00:00"\n' };
+        '"ETE-ZZZZZ","{""name"":""Zoe"",""done"":[""intrus101"",""DEFI_SUPPRIME"",""faute_frappe""]}","2026-07-01 10:00:00"\n' };
       return oldFetch(url);
     };
     try {
@@ -312,7 +314,7 @@ const fs = require('fs');
         'code,etat_json,maj\n' +
         '"ETE-BAD1","{json casse","2026-07-01 10:00:00"\n' +
         '"ETE-BAD2","{""name"":""SansDone""}","2026-07-01 10:00:00"\n' +
-        '"ETE-GOOD","{""name"":""Ok"",""done"":[""Biketrip-col1""]}","2026-07-01 10:00:00"\n' };
+        '"ETE-GOOD","{""name"":""Ok"",""done"":[""intrus101""]}","2026-07-01 10:00:00"\n' };
       return oldFetch(url);
     };
     try {
@@ -337,8 +339,8 @@ const fs = require('fs');
     global.fetch = async (url, opts) => {
       if (String(url).includes('sheet.local')) return { ok: true, status: 200, text: async () =>
         'code,etat_json,maj\n' +
-        '"ETE-AAAAA","{""name"":""Léa"",""done"":[""roadtrip-ville1"",""Biketrip-col1""]}","2026-07-01 10:00:00"\n' +
-        '"ETE-BBBBB","{""name"":""Sam"",""done"":[""duel-301""]}","2026-07-02 10:00:00"\n' };
+        '"ETE-AAAAA","{""name"":""Léa"",""done"":[""Rotation201"",""intrus101""]}","2026-07-01 10:00:00"\n' +
+        '"ETE-BBBBB","{""name"":""Sam"",""done"":[""Rotation300"",""intrus301"",""duel-303""]}","2026-07-02 10:00:00"\n' };
       return oldFetch(url, opts);
     };
     try {
@@ -346,10 +348,10 @@ const fs = require('fs');
       await lb({ method: 'GET', url: '/api/leaderboard?k=SECRETK', query: { k: 'SECRETK' }, headers: {} }, r);
       assert.equal(r._.code, 200);
       const b = r._.body;
-      assert.equal(b.players[0].name, 'Sam');   // duel-301 : 30 (niv3) + 30 (palier 3 complété) = 60
-      assert.equal(b.players[0].score, 60);
-      assert.equal(b.players[1].score, 30);     // roadtrip-ville1 (niv2=20) + Biketrip-col1 (niv1=10)
-      assert.equal(b.totalDefis, 17);
+      assert.equal(b.players[0].name, 'Sam');   // palier 3 complet : 3 défis × 30 + 30 (thème) = 120
+      assert.equal(b.players[0].score, 120);
+      assert.equal(b.players[1].score, 30);     // Rotation201 (niv2=20) + intrus101 (niv1=10)
+      assert.equal(b.totalDefis, 13);
       assert.ok(!JSON.stringify(b).includes('ETE-'), 'codes jamais exposés');
     } finally {
       global.fetch = oldFetch;
@@ -358,19 +360,19 @@ const fs = require('fs');
     }
   });
 
-  await t('prompts externalisés : duel-301 (.md ×2) servi, zéro .md orphelin en prod', async () => {
+  await t('prompts externalisés : duel-303 (.md ×2) servi, zéro .md orphelin en prod', async () => {
     const fs2 = require('fs');
     assert.ok(fs2.existsSync('api/prompts/duel_barmen_a.md') && fs2.existsSync('api/prompts/duel_barmen_b.md'), 'fichiers duel');
     for (const prov of ['mistral', 'gemini']) {
       const r = makeRes();
-      await chat(makeReq({ body: { prompt: 'Test', capsule: 'duel-301', provider: prov }, ip: '10.0.9.' + (prov === 'gemini' ? 2 : 1) }), r);
+      await chat(makeReq({ body: { prompt: 'Test', capsule: 'duel-303', provider: prov }, ip: '10.0.9.' + (prov === 'gemini' ? 2 : 1) }), r);
       assert.equal(r._.code, 200);
       assert.equal(r._.body.provider, prov);
     }
     const srcC = fs2.readFileSync('api/chat.js', 'utf8');
     eval(srcC.slice(srcC.indexOf('function parseCSV'), srcC.indexOf('// --- Prompts externalisés')));
     const rows = parseCSV(fs2.readFileSync('content/defis.csv', 'utf8'));
-    const d = rows.filter((x) => x.id !== '_testjuge').find((x) => x.id === 'duel-301');
+    const d = rows.filter((x) => x.id !== '_testjuge').find((x) => x.id === 'duel-303');
     assert.equal(d.contexte_ia, 'duel_barmen_a.md;duel_barmen_b.md');
     assert.equal(d.gagnant, 'a', 'duel départagé');
     /* zéro .md orphelin : chaque référence .md du CSV de prod existe sur disque */
@@ -431,7 +433,7 @@ const fs = require('fs');
     NET.captured = [];
     for (const prov of ['mistral', 'gemini']) {
       const r = makeRes();
-      await chat(makeReq({ body: { prompt: 'Compare', capsule: 'duel-301', provider: prov,
+      await chat(makeReq({ body: { prompt: 'Compare', capsule: 'duel-303', provider: prov,
         history: [{ role:'user', content:'premier' }, { role:'assistant', content:'reponse' }, { role:'user', content:'Compare' }] },
         ip: '10.5.0.' + (prov === 'gemini' ? 4 : 3) }), r);
       assert.equal(r._.code, 200);
@@ -497,7 +499,7 @@ const fs = require('fs');
   await t('prompt standard : jamais d\'audit LLM (validate → validé d\'office)', async () => {
     // bbq est un défi prompt pur : loadJudge doit renvoyer '' → win d'office, zéro appel Juge
     const r = makeRes();
-    await chat(makeReq({ body: { action: 'validate', capsule: 'Biketrip-col2',
+    await chat(makeReq({ body: { action: 'validate', capsule: 'qcm1',
       history: [{ role: 'user', content: 'test' }] }, ip: '10.3.0.9' }), r);
     assert.equal(r._.code, 200);
     assert.equal(r._.body.win, true);
@@ -512,36 +514,45 @@ const fs = require('fs');
     delete process.env.GEMINI_MODEL;
     NET.captured = [];
     let r = makeRes();
-    await chat(makeReq({ body: { prompt: 'test', capsule: 'Biketrip-col2', provider: 'gemini' }, ip: '10.9.0.1' }), r);
+    await chat(makeReq({ body: { prompt: 'test', capsule: 'qcm1', provider: 'gemini' }, ip: '10.9.0.1' }), r);
     assert.equal(r._.code, 200);
     const g1 = NET.captured.filter((c) => c.url.includes('generativelanguage')).map(bodyOf).pop();
     assert.equal(g1.generationConfig.thinkingConfig.thinkingBudget, 0, 'budget 0 sur 2.5-flash');
-    assert.equal(g1.generationConfig.maxOutputTokens, 700, 'tokens intacts');
+    assert.equal(g1.generationConfig.maxOutputTokens, 1000, 'tokens intacts');
     // surcharge hors famille 2.5-flash : requête strictement d'origine
     process.env.GEMINI_MODEL = 'gemini-2.5-pro';
     NET.captured = [];
     r = makeRes();
-    await chat(makeReq({ body: { prompt: 'test', capsule: 'Biketrip-col2', provider: 'gemini' }, ip: '10.9.0.2' }), r);
+    await chat(makeReq({ body: { prompt: 'test', capsule: 'qcm1', provider: 'gemini' }, ip: '10.9.0.2' }), r);
     const g2 = NET.captured.filter((c) => c.url.includes('generativelanguage')).map(bodyOf).pop();
     assert.ok(!g2.generationConfig.thinkingConfig, 'aucun thinkingConfig hors 2.5-flash');
-    assert.equal(g2.generationConfig.maxOutputTokens, 700);
+    assert.equal(g2.generationConfig.maxOutputTokens, 1000);
     delete process.env.GEMINI_MODEL;
   });
 
-  await t('longueur : capLength borne à 900 car, coupe à la phrase, jamais un mot', async () => {
+  await t('longueur v2 : plafond 2800, fin cassée (finish_reason) nettoyée, listes intactes', async () => {
     const src = require('fs').readFileSync('api/chat.js', 'utf8');
     eval(src.slice(src.indexOf('const MAX_REPLY_CHARS'), src.indexOf('async function callMistral')));
-    // court : inchangé
-    assert.equal(capLength('Salut. Ça va ?'), 'Salut. Ça va ?');
-    // long : sous la limite + fin propre
-    const capped = capLength('Phrase complète. '.repeat(80));
-    assert.ok(capped.length <= 900, 'borné à 900');
+    // court fini proprement : inchangé
+    assert.equal(capLength('Salut. Ça va ?', false), 'Salut. Ça va ?');
+    // liste sans ponctuation finale, PAS coupée : INTACTE (anti-mutilation)
+    const liste = 'Ta liste : 1. Gin 2. Tonic 3. Citron vert';
+    assert.equal(capLength(liste, false), liste, 'liste légitime mutilée');
+    // ANGLE MORT corrigé : coupure API sous la limite → nettoyée à la phrase
+    const casse = 'Une phrase complète ici. '.repeat(32) + 'Et soudain le moteur cou';
+    const c3 = capLength(casse, true);
+    assert.ok(c3.endsWith('.') && !c3.includes('cou'), 'fin cassée sous limite non nettoyée');
+    // plafond dur 2800 : coupe à la dernière phrase
+    const capped = capLength('Phrase complète. '.repeat(200), false);
+    assert.ok(capped.length <= 2800, 'borné à 2800');
     assert.ok(/[.!?…]$/.test(capped), 'finit sur une ponctuation');
-    // null : pas de crash
-    assert.equal(capLength(null), '');
-    // config : 700 tokens + 120 mots
-    assert.ok(src.includes('max_tokens: 700') && src.includes('maxOutputTokens: 700'), 'tokens plafonnés à 700');
-    assert.ok(src.includes('120 mots maximum'), 'instruction 120 mots');
+    // vide : reste vide (le repli « réponse vide » doit se déclencher)
+    assert.equal(capLength(null, true), '');
+    assert.equal(capLength('', true), '');
+    // config : 1000 tokens + 400 mots + lecture du signal de coupure
+    assert.ok(src.includes('max_tokens: 1000') && src.includes('maxOutputTokens: 1000'), 'tokens à 1000');
+    assert.ok(src.includes('400 mots maximum'), 'instruction 400 mots');
+    assert.ok(src.includes("finish_reason === 'length'") && src.includes("finishReason === 'MAX_TOKENS'"), 'signal de coupure lu sur les 2 moteurs');
   });
 
   /* ─── Le Juge (action validate) ─── */
@@ -571,7 +582,7 @@ const fs = require('fs');
 
   await t('juge : défi sans critères → validé d\'office, jamais de crash', async () => {
     const r = makeRes();
-    await chat(makeReq({ body: { action: 'validate', capsule: 'Biketrip-col2',
+    await chat(makeReq({ body: { action: 'validate', capsule: 'qcm1',
       history: [{ role: 'user', content: 'x' }] }, ip: '10.1.0.3' }), r);
     assert.equal(r._.code, 200);
     assert.equal(r._.body.win, true);
@@ -619,25 +630,25 @@ const fs = require('fs');
       'ouverture exclue de l\'export MD');
   });
 
-  await t('ouverture (bonus) : colonne présente, duel-301 porte 2 répliques A;;B', async () => {
+  await t('ouverture (bonus) : colonne présente, duel-303 porte 2 répliques A;;B', async () => {
     const fs2 = require('fs');
     const srcC = fs2.readFileSync('api/chat.js', 'utf8');
     eval(srcC.slice(srcC.indexOf('function parseCSV'), srcC.indexOf('// --- Prompts externalisés')));
     const rows2 = parseCSV(fs2.readFileSync('content/defis.csv', 'utf8'));
     assert.ok(rows2.every(r => 'ouverture' in r), 'colonne ouverture sur toutes les lignes');
-    const d104 = rows2.find(r => r.id === 'duel-301');
-    assert.ok(d104 && d104.ouverture.includes(';;'), 'duel-301 : ouverture duel avec séparateur A;;B');
+    const d104 = rows2.find(r => r.id === 'duel-303');
+    assert.ok(d104 && d104.ouverture.includes(';;'), 'duel-303 : ouverture duel avec séparateur A;;B');
     // non-régression : la grande majorité des défis n'ont PAS d'ouverture (bonus)
     const withOpening = rows2.filter(r => (r.ouverture || '').trim());
     assert.ok(withOpening.length >= 1 && withOpening.length < rows2.length, 'ouverture reste optionnelle');
   });
 
-  await t('defis.csv : 17 défis, 4 niveaux couverts, duel complet', async () => {
+  await t('defis.csv : 13 défis, 4 niveaux couverts, duel complet', async () => {
     const src = fs.readFileSync('api/chat.js', 'utf8');
     const fn = src.slice(src.indexOf('function parseCSV'), src.indexOf('// --- Prompts externalisés'));
     eval(fn);
     const rows = parseCSV(fs.readFileSync('content/defis.csv', 'utf8')).filter((r) => r.id !== '_testjuge');
-    assert.equal(rows.length, 17);
+    assert.equal(rows.length, 13);
     assert.deepEqual([...new Set(rows.map(r => r.niveau))].sort(), ['1', '2', '3', '4']);
     const duel = rows.find(r => r.mode === 'duel');
     assert.ok(duel && duel.sim && duel.sim2 && duel.contexte_ia);
@@ -649,8 +660,8 @@ const fs = require('fs');
     assert.ok(rot && rot.data.trim().length > 0, 'rotation data (image seule, ou image|motMystere)');
     const intr = rows.find(r => r.mode === 'intrus');
     assert.ok(intr && 'urls_visuels' in intr && 'index_intrus' in intr && 'legendes' in intr && !('legende_intrus' in intr), 'colonnes intrus simplifiées');
-    const dd = rows.find(r => r.id === 'duel-301');
-    assert.ok(dd && dd.gagnant === 'a' && dd.sim && dd.sim2, 'duel-301 complet (départage + démo)');
+    const dd = rows.find(r => r.id === 'duel-303');
+    assert.ok(dd && dd.gagnant === 'a' && dd.sim && dd.sim2, 'duel-303 complet (départage + démo)');
     assert.equal(rows.filter(r => r.final === '1').length, 0, 'aucun défi final en prod (mécanique +20 dormante)');
     assert.ok(rows.every(r => 'chrono' in r && 'final' in r), 'colonnes chrono/final');
     assert.ok(rows.every(r => r.objectif && r.duree));

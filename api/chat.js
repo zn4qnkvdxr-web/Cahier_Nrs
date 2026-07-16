@@ -25,13 +25,11 @@ function rateLimited(ip) {
 
 // --- System prompt épinglé côté serveur : le client ne peut pas le modifier ---
 const SYSTEM_PROMPT = [
-  "Tu es l'assistant pédagogique du « Cahier de vacances IA », un parcours d'été",
-  "interne pour apprendre à utiliser l'IA (prompts, automatisation, agents).",
-  "Réponds toujours en français, avec bienveillance. Sois CONCIS : 120 mots maximum, en allant à l'essentiel, sans remplissage ni redites.",
-  "Encourage l'itération : si le prompt de l'utilisateur est vague, réponds puis",
-  "suggère une amélioration concrète de sa formulation.",
-  "Reste dans le cadre pédagogique : décline poliment toute demande manifestement",
-  "hors sujet, dangereuse ou inappropriée, et ramène vers l'exercice en cours.",
+  "Tu es l'assistant du « Cahier de vacances IA », un parcours d'été",
+  "interne pour apprendre à utiliser l'IA par la pratique.",
+  "Réponds toujours en français, avec bienveillance et enthousiasme. Donne des réponses complètes, riches et détaillées (400 mots maximum).",
+  "Gère ton budget de rédaction pour conclure proprement ton propos : ne laisse jamais de phrase incomplète ou coupée en plein milieu.",
+  "Reste dans le cadre du défi en cours : décline poliment toute demande manifestement hors sujet, dangereuse ou inappropriée, et ramène vers l'exercice.",
 ].join(' ');
 
 const MAX_PROMPT_CHARS = 4000;
@@ -167,9 +165,8 @@ async function buildSystemPrompt(capsuleId, provider) {
       ' Reste strictement dans ce cadre : décline poliment toute demande sans rapport' +
       ' (code pour un autre projet, mails professionnels hors sujet, questions politiques…)' +
       ' et ramène vers le défi.' +
-      ' Philosophie human-in-the-loop : ne fais pas le défi à la place du voyageur —' +
-      ' réponds à sa demande, puis critique constructivement son prompt et suggère' +
-      ' une amélioration concrète. L\'humain pilote, l\'IA assiste.';
+      ' Joue ton rôle à 100 %, en restant immersif : ne fais JAMAIS de méta-commentaire' +
+      ' sur la qualité ou la formulation du prompt reçu.';
   }
   return sp;
 }
@@ -348,17 +345,25 @@ module.exports = async (req, res) => {
   }
 };
 
-// Garde-fou de longueur : filet de sécurité si une IA dépasse malgré la consigne.
-// Coupe proprement à la fin de la dernière phrase complète sous la limite (jamais
-// au milieu d'un mot), et n'ajoute « … » que si on a réellement tronqué.
-const MAX_REPLY_CHARS = 900;
-function capLength(text) {
-  const t = String(text || '').trim();
-  if (t.length <= MAX_REPLY_CHARS) return t;
-  const slice = t.slice(0, MAX_REPLY_CHARS);
-  // dernière fin de phrase (. ! ? …) dans la tranche
-  const m = slice.match(/[\s\S]*[.!?…]/);
-  let out = m ? m[0] : slice.slice(0, slice.lastIndexOf(' ') > 0 ? slice.lastIndexOf(' ') : slice.length);
+// Garde-fou de longueur, en deux temps.
+// 1) PLAFOND DUR : au-delà de MAX_REPLY_CHARS (≈ 400 mots aérés), coupe à la
+//    dernière phrase complète - jamais au milieu d'un mot.
+// 2) FIN CASSÉE : si l'API signale avoir interrompu la génération (finish_reason),
+//    on termine proprement MÊME SOUS le plafond. C'était l'angle mort historique :
+//    un texte de 850 caractères guillotiné en plein mot repartait tel quel.
+// `wasCut` vient du signal OFFICIEL de l'API (finish_reason / finishReason) : on
+// ne devine pas la casse à la ponctuation, sinon toute réponse finissant
+// légitimement sur une liste, un emoji ou un deux-points serait mutilée à tort.
+const MAX_REPLY_CHARS = 2800;
+function capLength(text, wasCut) {
+  let t = String(text || '').trim();
+  if (!t) return t;                          /* vide → vide : le repli « réponse vide » doit rester déclenchable */
+  const over = t.length > MAX_REPLY_CHARS;
+  if (over) t = t.slice(0, MAX_REPLY_CHARS);
+  if (!over && !wasCut) return t;            /* texte entier : fin choisie par l'IA */
+  if (/[.!?…]$/.test(t)) return t;           /* déjà une fin de phrase propre */
+  const m = t.match(/[\s\S]*[.!?…]/);        /* dernière ponctuation forte */
+  let out = m ? m[0] : t.slice(0, t.lastIndexOf(' ') > 0 ? t.lastIndexOf(' ') : t.length);
   out = out.trim();
   if (!/[.!?…]$/.test(out)) out += ' …';
   return out;
@@ -377,7 +382,7 @@ async function callMistral(userPrompt, systemPrompt, historyMsgs) {
       messages: [{ role: 'system', content: systemPrompt }].concat(
         historyMsgs || [{ role: 'user', content: userPrompt }]
       ),
-      max_tokens: 700,
+      max_tokens: 1000,
       temperature: 0.6,
     }),
   });
@@ -389,7 +394,9 @@ async function callMistral(userPrompt, systemPrompt, historyMsgs) {
     throw new Error(`Mistral HTTP ${r.status} - ${String(raw).slice(0, 300)}`);
   }
   const data = await r.json();
-  const text = capLength(data?.choices?.[0]?.message?.content);
+  /* 'length' = génération interrompue par le plafond de tokens → fin à nettoyer */
+  const wasCut = data?.choices?.[0]?.finish_reason === 'length';
+  const text = capLength(data?.choices?.[0]?.message?.content, wasCut);
   if (!text) throw new Error('Réponse Mistral vide');
   return text;
 }
@@ -416,7 +423,7 @@ async function callGemini(userPrompt, systemPrompt, historyMsgs) {
       // envoyé uniquement aux modèles 2.5-flash* (qui l'acceptent) ; 2.5-pro le
       // refuse, et tout autre modèle surchargé via GEMINI_MODEL reste intact.
       generationConfig: Object.assign(
-        { maxOutputTokens: 700, temperature: 0.6 },
+        { maxOutputTokens: 1000, temperature: 0.6 },
         model.includes('2.5-flash') ? { thinkingConfig: { thinkingBudget: 0 } } : {}
       ),
     }),
@@ -430,7 +437,9 @@ async function callGemini(userPrompt, systemPrompt, historyMsgs) {
   const textRaw = (data?.candidates?.[0]?.content?.parts || [])
     .map((p) => p.text || '')
     .join('');
-  const text = capLength(textRaw);
+  /* 'MAX_TOKENS' = génération interrompue par le plafond → fin à nettoyer */
+  const wasCut = data?.candidates?.[0]?.finishReason === 'MAX_TOKENS';
+  const text = capLength(textRaw, wasCut);
   if (!text) throw new Error('Réponse Gemini vide');
   return text;
 }

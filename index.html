@@ -216,7 +216,7 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
   /* lisible même si le navigateur force un rendu sombre (ton-sur-ton sinon) */
   .app-head .hi,
   .hero h1, .hero .lede, .hero .lede b,
-  .k-title, .k-sub{color:var(--ink-soft)}
+  .k-title, .k-sub, .privacy-note{color:var(--ink-soft)}
 }
 .resume-link{margin-top:16px;display:inline-flex;align-items:center;gap:8px;
   font:800 .9rem 'Nunito';padding:9px 16px;border-radius:var(--r-pill);cursor:pointer;
@@ -296,6 +296,11 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
 .sept h2{font-weight:800;font-size:clamp(1.7rem,5vw,2.6rem);letter-spacing:-.01em}
 .sept p{opacity:.92;margin:10px auto 0;max-width:52ch}
 .sept .btn{margin-top:22px}
+.sept a.btn{text-decoration:none}
+.sept-steps{display:flex;gap:10px 26px;justify-content:center;flex-wrap:wrap;
+  margin:14px auto 0;font-weight:800;opacity:.95}
+.privacy-note{text-align:center;max-width:62ch;margin:-26px auto 56px;padding:0 20px;
+  font-size:.82rem;line-height:1.6;color:var(--ink-soft)}
 .footer{padding:0 0 46px;text-align:center;font:700 .78rem 'Space Mono',monospace;color:var(--ink-soft)}
 
 /* ---------- [8] Capsule + bac à sable ---------- */
@@ -760,7 +765,12 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
       </div>
       <div style="text-align:center;padding:44px 0 64px">
         <button class="btn btn-sun btn-lg io" id="openBtn2">Je commence maintenant <span class="arr">→</span></button>
-      <p class="k-sub io"<br> Côté coulisses : rassurez-vous, l'application a été conçue dans une démarche de sobriété énergétique globale, et nous garantissons le respect absolu de la confidentialité de vos données (aucune information n'est conservée).</p>
+      </div>
+      <p class="privacy-note io">Côté coulisses : rassurez-vous, l'application a été conçue dans une démarche de sobriété énergétique globale, et nous garantissons le respect absolu de la confidentialité de vos données (aucune information n'est conservée).</p>
+      <div class="sept io">
+        <h2>Rendez-vous en Septembre pour de nouvelles aventures</h2>
+        <p class="sept-steps"><span>🖥️ Webinaires</span><span>🏫 Formations</span><span>🛠️ Ateliers pratiques…</span></p>
+        <a class="btn btn-sun sept-cta" href="#">Je veux en être ✉️</a>
       </div>
     </div>
   </section>
@@ -784,9 +794,9 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
     </div>
     <div class="grid" id="grid"></div>
     <div class="sept io">
-      <h2>Rendez-vous le 24 septembre.</h2>
-      <p>On se retrouve tous pour un webinaire et des ateliers pratiques : tes tampons deviennent des automatisations bien réelles, assemblées ensemble.</p>
-      <button class="btn btn-sun" id="septBtn">M'y faire penser 📅</button>
+      <h2>Rendez-vous en Septembre pour de nouvelles aventures</h2>
+      <p class="sept-steps"><span>🖥️ Webinaires</span><span>🏫 Formations</span><span>🛠️ Ateliers pratiques…</span></p>
+      <a class="btn btn-sun sept-cta" href="#">Je veux en être ✉️</a>
     </div>
     <div class="footer">Mon été IA 2026 · fabriqué maison, avec du soleil ✷<br>
       <button class="link-about" id="aboutBtnFoot">À propos & équipe</button></div>
@@ -2497,22 +2507,18 @@ function updateProg(){
   $('#progBar').style.width=(n/tot*100)+'%';
 }
 
-/* --- Bandeau septembre (simulation) --- */
-const sb=$('#septBtn');
-if(sb) sb.onclick=()=>{
-  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Mon ete IA//FR','BEGIN:VEVENT',
-    'UID:ete-ia-restitution-2026@cahier','DTSTAMP:20260707T090000Z',
-    'DTSTART;VALUE=DATE:20260924','DTEND;VALUE=DATE:20260925',
-    'SUMMARY:Restitution - Cahier de vacances IA (webinaire + ateliers)',
-    'DESCRIPTION:On compare les tampons et on assemble les automatisations en ateliers.',
-    'END:VEVENT','END:VCALENDAR'].join('\r\n');
-  const url=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
-  const a=document.createElement('a'); a.href=url; a.download='rendez-vous-24-septembre.ics';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),4000);
-  sb.textContent='✓ Invitation téléchargée : ouvre-la pour l\'ajouter';
-  trackEvent('rappel_septembre','ics');
-};
+/* --- Bandeaux septembre (landing + accueil app) : CTA configurable (config.js → SEPTEMBRE) --- */
+$$('.sept-cta').forEach((sb)=>{
+  const cfgS=(window.CV_CONFIG&&window.CV_CONFIG.SEPTEMBRE)||{};
+  if(cfgS.CTA===false){
+    /* Masquage sans régression graphique : la marge vit sur le bouton lui-même
+       (.sept .btn{margin-top}), sa disparition ne laisse aucun trou. */
+    sb.remove();
+  }else{
+    sb.href=cfgS.MAILTO||('mailto:cahier_de_vacances_IA@norsys.fr?subject='+
+      encodeURIComponent('Cahier de vacances IA - Suite des aventures'));
+  }
+});
 
 /* --- [8b] Le sac de plage : ressources (pilotées par CSV GitHub en prod) --- */
 const RESOURCES = [
