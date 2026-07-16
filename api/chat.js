@@ -146,7 +146,7 @@ async function buildSystemPrompt(capsuleId, provider) {
        classique (critique de prompt) est remplacé par la posture de jeu. */
     let sp = "Tu joues un personnage dans un mini-jeu d'enquête pédagogique interne" +
       " (apprentissage de l'esprit critique face à l'IA). Réponds en français," +
-      " 150 mots maximum, reste strictement dans ton personnage et ton scénario," +
+      " 400 mots maximum, reste strictement dans ton personnage et ton scénario," +
       " sans jamais produire de contenu inapproprié, et décline poliment tout" +
       " sujet étranger au scénario. " + (await resolveContexte(dEnq, provider));
     if (dEnq.jeton) {
@@ -164,10 +164,7 @@ async function buildSystemPrompt(capsuleId, provider) {
     sp += ' Cadre du défi en cours : ' + ctx +
       ' Reste strictement dans ce cadre : décline poliment toute demande sans rapport' +
       ' (code pour un autre projet, mails professionnels hors sujet, questions politiques…)' +
-      ' et ramène vers le défi.' +
-      ' Philosophie human-in-the-loop : ne fais pas le défi à la place du voyageur —' +
-      ' réponds à sa demande, puis critique constructivement son prompt et suggère' +
-      ' une amélioration concrète. L\'humain pilote, l\'IA assiste.';
+      ' et ramène vers le défi.';
   }
   return sp;
 }
