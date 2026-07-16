@@ -27,8 +27,9 @@ function rateLimited(ip) {
 const SYSTEM_PROMPT = [
   "Tu es l'assistant pédagogique du « Cahier de vacances IA », un parcours d'été",
   "interne pour apprendre à utiliser l'IA (prompts, automatisation, agents).",
-  "Réponds toujours en français, avec bienveillance. Donne des réponses complètes, riches et détaillées : 400 mots maximum.",
-  "Gère ton budget de rédaction pour conclure proprement ton propos : ne laisse jamais de phrase incomplète, suspendue ou coupée en plein milieu.",
+  "Réponds toujours en français, avec bienveillance. Sois CONCIS : 120 mots maximum, en allant à l'essentiel, sans remplissage ni redites.",
+  "Encourage l'itération : si le prompt de l'utilisateur est vague, réponds puis",
+  "suggère une amélioration concrète de sa formulation.",
   "Reste dans le cadre pédagogique : décline poliment toute demande manifestement",
   "hors sujet, dangereuse ou inappropriée, et ramène vers l'exercice en cours.",
 ].join(' ');
@@ -147,7 +148,7 @@ async function buildSystemPrompt(capsuleId, provider) {
        classique (critique de prompt) est remplacé par la posture de jeu. */
     let sp = "Tu joues un personnage dans un mini-jeu d'enquête pédagogique interne" +
       " (apprentissage de l'esprit critique face à l'IA). Réponds en français," +
-      " 400 mots maximum, reste strictement dans ton personnage et ton scénario," +
+      " 150 mots maximum, reste strictement dans ton personnage et ton scénario," +
       " sans jamais produire de contenu inapproprié, et décline poliment tout" +
       " sujet étranger au scénario. " + (await resolveContexte(dEnq, provider));
     if (dEnq.jeton) {
@@ -165,7 +166,10 @@ async function buildSystemPrompt(capsuleId, provider) {
     sp += ' Cadre du défi en cours : ' + ctx +
       ' Reste strictement dans ce cadre : décline poliment toute demande sans rapport' +
       ' (code pour un autre projet, mails professionnels hors sujet, questions politiques…)' +
-      ' et ramène vers le défi.';
+      ' et ramène vers le défi.' +
+      ' Philosophie human-in-the-loop : ne fais pas le défi à la place du voyageur —' +
+      ' réponds à sa demande, puis critique constructivement son prompt et suggère' +
+      ' une amélioration concrète. L\'humain pilote, l\'IA assiste.';
   }
   return sp;
 }
@@ -347,25 +351,15 @@ module.exports = async (req, res) => {
 // Garde-fou de longueur : filet de sécurité si une IA dépasse malgré la consigne.
 // Coupe proprement à la fin de la dernière phrase complète sous la limite (jamais
 // au milieu d'un mot), et n'ajoute « … » que si on a réellement tronqué.
-const MAX_REPLY_CHARS = 2800;
+const MAX_REPLY_CHARS = 900;
 function capLength(text) {
-  let t = String(text || '').trim();
-  
-  // Si le texte est trop long, on coupe d'abord à la limite stricte
-  if (t.length > MAX_REPLY_CHARS) {
-    t = t.slice(0, MAX_REPLY_CHARS);
-  } else if (/[.!?…]$/.test(t)) {
-    // Si le texte est sous la limite ET se termine par une vraie ponctuation, on le renvoie tel quel
-    return t;
-  }
-
-  // Ici, le texte est soit trop long, soit coupé au milieu d'une phrase par l'API.
-  // On cherche la dernière ponctuation forte (. ! ? …) pour finir proprement.
-  const m = t.match(/[\s\S]*[.!?…]/);
-  let out = m ? m[0] : t.slice(0, t.lastIndexOf(' ') > 0 ? t.lastIndexOf(' ') : t.length);
+  const t = String(text || '').trim();
+  if (t.length <= MAX_REPLY_CHARS) return t;
+  const slice = t.slice(0, MAX_REPLY_CHARS);
+  // dernière fin de phrase (. ! ? …) dans la tranche
+  const m = slice.match(/[\s\S]*[.!?…]/);
+  let out = m ? m[0] : slice.slice(0, slice.lastIndexOf(' ') > 0 ? slice.lastIndexOf(' ') : slice.length);
   out = out.trim();
-  
-  // Si on n'a pas pu finir sur une ponctuation propre, on ajoute des points de suspension
   if (!/[.!?…]$/.test(out)) out += ' …';
   return out;
 }
@@ -383,7 +377,7 @@ async function callMistral(userPrompt, systemPrompt, historyMsgs) {
       messages: [{ role: 'system', content: systemPrompt }].concat(
         historyMsgs || [{ role: 'user', content: userPrompt }]
       ),
-      max_tokens: 1000,
+      max_tokens: 700,
       temperature: 0.6,
     }),
   });
@@ -422,7 +416,7 @@ async function callGemini(userPrompt, systemPrompt, historyMsgs) {
       // envoyé uniquement aux modèles 2.5-flash* (qui l'acceptent) ; 2.5-pro le
       // refuse, et tout autre modèle surchargé via GEMINI_MODEL reste intact.
       generationConfig: Object.assign(
-        { maxOutputTokens: 1000, temperature: 0.6 },
+        { maxOutputTokens: 700, temperature: 0.6 },
         model.includes('2.5-flash') ? { thinkingConfig: { thinkingBudget: 0 } } : {}
       ),
     }),

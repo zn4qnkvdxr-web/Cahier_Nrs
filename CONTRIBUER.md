@@ -56,6 +56,36 @@ SharePoint/Drive, qui ouvre une page et non l'image.
 
 Pour `prompt` et `duel`, laisser `data` vide.
 
+## ✅ Vérifier AVANT de publier (le réflexe qui évite 95 % des soucis)
+
+```bash
+npm run verifier        # ou : node test/verif-contenu.js
+```
+
+Le validateur relit `defis.csv` et `ressources.csv` avec les **mêmes règles que
+le moteur** et signale tout ce qui casserait ou dégraderait un défi : mode mal
+orthographié, niveau hors 1-4 (défi invisible !), question de quiz sans bonne
+réponse unique, fichier `.md` introuvable, duel incomplet, index d'intrus hors
+plage… `✗` = à corriger avant publication ; `⚠`/`ℹ` = à arbitrer.
+
+**Les règles d'or (par impact) :**
+1. **Ne JAMAIS renommer l'`id` d'un défi déjà publié** — les tampons des joueurs
+   pointent dessus : renommer = progression perdue pour tout le monde.
+   Format recommandé : minuscules/chiffres/tirets (ex. `rotation-401`).
+2. **`niveau` ∈ 1-4 obligatoire** — toute autre valeur rend le défi *invisible*
+   sur l'accueil (aucune section ne l'affiche).
+3. **`mode` en minuscules exactes** (`prompt`, `prompt-juge`, `duel`, `qcm`,
+   `puzzle`, `rotation`, `intrus`) — une faute de frappe bascule silencieusement
+   le défi en bac à sable générique.
+4. **Séparateurs réservés** : `|` (options, visuels, étapes), `;;` (questions,
+   répliques d'ouverture duel), `;` (fichiers contexte) — ne jamais les employer
+   dans les textes eux-mêmes.
+5. **QCM** : exactement **une** option marquée `*`, l'étoile **collée en fin**.
+6. **Rotation** : image **carrée** (la grille 3×3 déforme les autres ratios).
+7. **Intrus** : `index_intrus` compte **à partir de 0** (0 = premier visuel).
+8. **Duel départagé** : `gagnant` + deux `.md` distincts + `sim`/`sim2` remplis
+   (repli si panne moteur) + ouverture **neutre** (`A;;B`).
+
 **Deux familles de défis de prompt :**
 
 - **`prompt` (standard)** — le voyageur discute avec l'IA dans le bac à sable,

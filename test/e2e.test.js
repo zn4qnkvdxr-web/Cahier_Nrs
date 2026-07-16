@@ -82,7 +82,7 @@ const fs = require('fs');
   await t('nominal : Mistral répond', async () => {
     NET.mistral = 'ok';
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: '201' }, ip: '10.0.0.1' }), res);
+    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: 'Biketrip-col2' }, ip: '10.0.0.1' }), res);
     assert.equal(res._.code, 200);
     assert.equal(res._.body.provider, 'mistral');
     assert.match(res._.body.text, /Mistral/);
@@ -91,7 +91,7 @@ const fs = require('fs');
   await t('quota Mistral 429 → bascule Gemini transparente', async () => {
     NET.mistral = '429';
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: '201' }, ip: '10.0.0.2' }), res);
+    await chat(makeReq({ body: { prompt: 'Bonjour', capsule: 'Biketrip-col2' }, ip: '10.0.0.2' }), res);
     assert.equal(res._.code, 200);
     assert.equal(res._.body.provider, 'gemini');
   });
@@ -114,14 +114,14 @@ const fs = require('fs');
 
   await t('duel : provider=gemini imposé, sans bascule', async () => {
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Duel', capsule: '205', provider: 'gemini' }, ip: '10.0.0.5' }), res);
+    await chat(makeReq({ body: { prompt: 'Duel', capsule: 'duel-301', provider: 'gemini' }, ip: '10.0.0.5' }), res);
     assert.equal(res._.body.provider, 'gemini');
   });
 
   await t('duel : provider=mistral en panne → 502 (pas de bascule cachée)', async () => {
     NET.mistral = '429';
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Duel', capsule: '205', provider: 'mistral' }, ip: '10.0.0.6' }), res);
+    await chat(makeReq({ body: { prompt: 'Duel', capsule: 'duel-301', provider: 'mistral' }, ip: '10.0.0.6' }), res);
     assert.equal(res._.code, 502);
     assert.equal(res._.body.provider, 'mistral');
     NET.mistral = 'ok';
@@ -137,7 +137,7 @@ const fs = require('fs');
   await t('contexte_ia injecté côté serveur (capsule connue)', async () => {
     NET.captured.length = 0;
     const res = makeRes();
-    await chat(makeReq({ body: { prompt: 'Y', capsule: '205' }, ip: '10.0.0.8' }), res);
+    await chat(makeReq({ body: { prompt: 'Y', capsule: 'duel-301' }, ip: '10.0.0.8' }), res);
     const sent = JSON.parse(NET.captured[0].opts.body);
     assert.match(sent.messages[0].content, /Cadre du défi en cours/);
     assert.match(sent.messages[0].content, /human-in-the-loop/);
@@ -283,7 +283,7 @@ const fs = require('fs');
     global.fetch = async (url) => {
       if (String(url).includes('sheet.local')) return { ok: true, status: 200, text: async () =>
         'code,etat_json,maj\n' +
-        '"ETE-ZZZZZ","{""name"":""Zoe"",""done"":[""201"",""DEFI_SUPPRIME"",""faute_frappe""]}","2026-07-01 10:00:00"\n' };
+        '"ETE-ZZZZZ","{""name"":""Zoe"",""done"":[""Biketrip-col1"",""DEFI_SUPPRIME"",""faute_frappe""]}","2026-07-01 10:00:00"\n' };
       return oldFetch(url);
     };
     try {
@@ -312,7 +312,7 @@ const fs = require('fs');
         'code,etat_json,maj\n' +
         '"ETE-BAD1","{json casse","2026-07-01 10:00:00"\n' +
         '"ETE-BAD2","{""name"":""SansDone""}","2026-07-01 10:00:00"\n' +
-        '"ETE-GOOD","{""name"":""Ok"",""done"":[""201""]}","2026-07-01 10:00:00"\n' };
+        '"ETE-GOOD","{""name"":""Ok"",""done"":[""Biketrip-col1""]}","2026-07-01 10:00:00"\n' };
       return oldFetch(url);
     };
     try {
@@ -337,8 +337,8 @@ const fs = require('fs');
     global.fetch = async (url, opts) => {
       if (String(url).includes('sheet.local')) return { ok: true, status: 200, text: async () =>
         'code,etat_json,maj\n' +
-        '"ETE-AAAAA","{""name"":""Léa"",""done"":[""201"",""101""]}","2026-07-01 10:00:00"\n' +
-        '"ETE-BBBBB","{""name"":""Sam"",""done"":[""401""]}","2026-07-02 10:00:00"\n' };
+        '"ETE-AAAAA","{""name"":""Léa"",""done"":[""roadtrip-ville1"",""Biketrip-col1""]}","2026-07-01 10:00:00"\n' +
+        '"ETE-BBBBB","{""name"":""Sam"",""done"":[""duel-301""]}","2026-07-02 10:00:00"\n' };
       return oldFetch(url, opts);
     };
     try {
@@ -346,10 +346,10 @@ const fs = require('fs');
       await lb({ method: 'GET', url: '/api/leaderboard?k=SECRETK', query: { k: 'SECRETK' }, headers: {} }, r);
       assert.equal(r._.code, 200);
       const b = r._.body;
-      assert.equal(b.players[0].name, 'Sam');   // agence : 40 + 20 (final) + 30 (thème) = 90
-      assert.equal(b.players[0].score, 90);
-      assert.equal(b.players[1].score, 30);     // 201(niv2=20) + 101(niv1=10) = 30
-      assert.equal(b.totalDefis, 25);
+      assert.equal(b.players[0].name, 'Sam');   // duel-301 : 30 (niv3) + 30 (palier 3 complété) = 60
+      assert.equal(b.players[0].score, 60);
+      assert.equal(b.players[1].score, 30);     // roadtrip-ville1 (niv2=20) + Biketrip-col1 (niv1=10)
+      assert.equal(b.totalDefis, 17);
       assert.ok(!JSON.stringify(b).includes('ETE-'), 'codes jamais exposés');
     } finally {
       global.fetch = oldFetch;
@@ -358,25 +358,26 @@ const fs = require('fs');
     }
   });
 
-  await t('prompts externalisés : défi migré (.md) servi, duel = 2 fournisseurs OK', async () => {
+  await t('prompts externalisés : duel-301 (.md ×2) servi, zéro .md orphelin en prod', async () => {
     const fs2 = require('fs');
-    assert.ok(fs2.existsSync('api/prompts/duel1_a.md') && fs2.existsSync('api/prompts/duel1_b.md'), 'fichiers duel');
+    assert.ok(fs2.existsSync('api/prompts/duel_barmen_a.md') && fs2.existsSync('api/prompts/duel_barmen_b.md'), 'fichiers duel');
     for (const prov of ['mistral', 'gemini']) {
       const r = makeRes();
-      await chat(makeReq({ body: { prompt: 'Test', capsule: '205', provider: prov }, ip: '10.0.9.' + (prov === 'gemini' ? 2 : 1) }), r);
+      await chat(makeReq({ body: { prompt: 'Test', capsule: 'duel-301', provider: prov }, ip: '10.0.9.' + (prov === 'gemini' ? 2 : 1) }), r);
       assert.equal(r._.code, 200);
       assert.equal(r._.body.provider, prov);
     }
     const srcC = fs2.readFileSync('api/chat.js', 'utf8');
     eval(srcC.slice(srcC.indexOf('function parseCSV'), srcC.indexOf('// --- Prompts externalisés')));
     const rows = parseCSV(fs2.readFileSync('content/defis.csv', 'utf8'));
-    const d = rows.find((x) => x.id === '205');
-    assert.equal(d.contexte_ia, 'duel1_a.md;duel1_b.md');
+    const d = rows.filter((x) => x.id !== '_testjuge').find((x) => x.id === 'duel-301');
+    assert.equal(d.contexte_ia, 'duel_barmen_a.md;duel_barmen_b.md');
     assert.equal(d.gagnant, 'a', 'duel départagé');
-    const b1 = rows.find((x) => x.id === '201');
-    assert.equal(b1.mode, 'prompt-juge', '201 est un défi prompt-juge');
-    assert.ok(fs2.readFileSync('api/prompts/bcn1.md', 'utf8').includes('CRITÈRES DU JUGE'));
-    assert.ok(rows.filter((x) => /\.md$/.test(x.contexte_ia)).length >= 3, 'défis migrés en .md');
+    /* zéro .md orphelin : chaque référence .md du CSV de prod existe sur disque */
+    for (const x of rows) for (const p of String(x.contexte_ia || '').split(';')) {
+      const f = p.trim();
+      if (f.endsWith('.md')) assert.ok(fs2.existsSync('api/prompts/' + f), 'md manquant: ' + f);
+    }
   });
 
   await t('prose héritée dans contexte_ia : toujours acceptée (rétro-compat)', async () => {
@@ -388,10 +389,28 @@ const fs = require('fs');
     assert.equal(r._.code, 200); // capsule inconnue → cadre générique, zéro crash
   });
 
+  /* ══ FIXTURE JUGE : la prod ne contient plus AUCUN défi prompt-juge ; on
+     injecte un défi temporaire (_testjuge → cocktail_happyhour.md, qui porte
+     des CRITÈRES DU JUGE) pour continuer d'éprouver toute la mécanique d'audit.
+     Le CSV de prod est restauré À L'IDENTIQUE à la fermeture, plus bas. ══ */
+  const JUDGE_CSV = 'content/defis.csv';
+  const JUDGE_ORIG = fs.readFileSync(JUDGE_CSV, 'utf8');
+  let chatJudge;
+  {
+    const head = JUDGE_ORIG.split('\n')[0].replace(/\r$/, '');
+    const cols = head.split(',').map((c) => c.replace(/^"|"$/g, ''));
+    const vals = { id: '_testjuge', niveau: '2', mode: 'prompt-juge', titre: 'Fixture Juge',
+      duree: '5 min', contexte_ia: 'cocktail_happyhour.md' };
+    const line = cols.map((c) => '"' + String(vals[c] || '').replace(/"/g, '""') + '"').join(',');
+    fs.writeFileSync(JUDGE_CSV, JUDGE_ORIG.replace(/\n?$/, '\n') + line + '\n');
+    delete require.cache[require.resolve('../api/chat.js')];
+    chatJudge = require('../api/chat.js');
+  }
+
   await t('BUG A · faux positif : « je ne peux pas approuver » → win:FALSE', async () => {
     NET.mistral = 'fauxami';
     const r = makeRes();
-    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'un tour a Barcelone'}] }, ip:'10.5.0.1' }), r);
+    await chatJudge(makeReq({ body: { action:'validate', capsule:'_testjuge', history:[{role:'user',content:'un tour a Barcelone'}] }, ip:'10.5.0.1' }), r);
     assert.equal(r._.body.win, false, 'un refus contenant « approuver » ne doit jamais valider');
     assert.ok(r._.body.text.includes('budget'));
     NET.mistral = 'ok';
@@ -400,7 +419,7 @@ const fs = require('fs');
   await t('BUG A · gras Markdown **[APPROUVE]** → win:true, ** retiré du texte', async () => {
     NET.mistral = 'gras';
     const r = makeRes();
-    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'De 14h a 18h, culturel, petit budget, a pied'}] }, ip:'10.5.0.2' }), r);
+    await chatJudge(makeReq({ body: { action:'validate', capsule:'_testjuge', history:[{role:'user',content:'De 14h a 18h, culturel, petit budget, a pied'}] }, ip:'10.5.0.2' }), r);
     assert.equal(r._.body.win, true);
     assert.ok(!r._.body.text.includes('*'), 'astérisques Markdown nettoyés');
     assert.ok(!/APPROUVE/i.test(r._.body.text), 'marqueur retiré');
@@ -412,7 +431,7 @@ const fs = require('fs');
     NET.captured = [];
     for (const prov of ['mistral', 'gemini']) {
       const r = makeRes();
-      await chat(makeReq({ body: { prompt: 'Compare', capsule: '205', provider: prov,
+      await chat(makeReq({ body: { prompt: 'Compare', capsule: 'duel-301', provider: prov,
         history: [{ role:'user', content:'premier' }, { role:'assistant', content:'reponse' }, { role:'user', content:'Compare' }] },
         ip: '10.5.0.' + (prov === 'gemini' ? 4 : 3) }), r);
       assert.equal(r._.code, 200);
@@ -429,7 +448,7 @@ const fs = require('fs');
   await t('juge parsing : [APPROUVÉ] avec accent → win:true', async () => {
     NET.mistral = 'accent';
     const r = makeRes();
-    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'14h-18h Gràcia culturel à pied petit budget'}] }, ip:'10.4.0.1' }), r);
+    await chatJudge(makeReq({ body: { action:'validate', capsule:'_testjuge', history:[{role:'user',content:'14h-18h Gràcia culturel à pied petit budget'}] }, ip:'10.4.0.1' }), r);
     assert.equal(r._.body.win, true);
     assert.ok(!/APPROUV/i.test(r._.body.text), 'marqueur retiré');
     NET.mistral = 'ok';
@@ -438,7 +457,7 @@ const fs = require('fs');
   await t('juge parsing : marqueur précédé d\'un préambule → détecté', async () => {
     NET.mistral = 'preamble';
     const r = makeRes();
-    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'De 14h à 18h, culturel, petit budget'}] }, ip:'10.4.0.2' }), r);
+    await chatJudge(makeReq({ body: { action:'validate', capsule:'_testjuge', history:[{role:'user',content:'De 14h à 18h, culturel, petit budget'}] }, ip:'10.4.0.2' }), r);
     assert.equal(r._.body.win, true);
     assert.ok(!/\[?APPROUVE\]?/i.test(r._.body.text), 'marqueur retiré même avec préambule');
     NET.mistral = 'ok';
@@ -447,7 +466,7 @@ const fs = require('fs');
   await t('juge parsing : [ REJETE ] avec espaces → win:false', async () => {
     NET.mistral = 'spaces';
     const r = makeRes();
-    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'un tour à Barcelone'}] }, ip:'10.4.0.3' }), r);
+    await chatJudge(makeReq({ body: { action:'validate', capsule:'_testjuge', history:[{role:'user',content:'un tour à Barcelone'}] }, ip:'10.4.0.3' }), r);
     assert.equal(r._.body.win, false);
     assert.ok(r._.body.text.includes('plage horaire'));
     NET.mistral = 'ok';
@@ -456,7 +475,7 @@ const fs = require('fs');
   await t('juge parsing : aucun marqueur → rejet doux instructif (pas une panne)', async () => {
     NET.mistral = 'nomark';
     const r = makeRes();
-    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'itinéraire'}] }, ip:'10.4.0.4' }), r);
+    await chatJudge(makeReq({ body: { action:'validate', capsule:'_testjuge', history:[{role:'user',content:'itinéraire'}] }, ip:'10.4.0.4' }), r);
     assert.equal(r._.code, 200);
     assert.equal(r._.body.win, false);
     assert.ok(r._.body.text.length > 12, 'message instructif, pas vide');
@@ -467,7 +486,7 @@ const fs = require('fs');
   await t('juge : 2 moteurs KO → 200 + judgeError + text exploitable (jamais un 502 sec)', async () => {
     NET.mistral = 'judgefail'; NET.gemini = 'down';
     const r = makeRes();
-    await chat(makeReq({ body: { action:'validate', capsule:'201', history:[{role:'user',content:'test'}] }, ip:'10.4.0.5' }), r);
+    await chatJudge(makeReq({ body: { action:'validate', capsule:'_testjuge', history:[{role:'user',content:'test'}] }, ip:'10.4.0.5' }), r);
     assert.equal(r._.code, 200, 'pas de 502 : le front doit pouvoir afficher le texte');
     assert.equal(r._.body.judgeError, true);
     assert.equal(r._.body.win, false);
@@ -478,7 +497,7 @@ const fs = require('fs');
   await t('prompt standard : jamais d\'audit LLM (validate → validé d\'office)', async () => {
     // bbq est un défi prompt pur : loadJudge doit renvoyer '' → win d'office, zéro appel Juge
     const r = makeRes();
-    await chat(makeReq({ body: { action: 'validate', capsule: '212',
+    await chat(makeReq({ body: { action: 'validate', capsule: 'Biketrip-col2',
       history: [{ role: 'user', content: 'test' }] }, ip: '10.3.0.9' }), r);
     assert.equal(r._.code, 200);
     assert.equal(r._.body.win, true);
@@ -493,7 +512,7 @@ const fs = require('fs');
     delete process.env.GEMINI_MODEL;
     NET.captured = [];
     let r = makeRes();
-    await chat(makeReq({ body: { prompt: 'test', capsule: '212', provider: 'gemini' }, ip: '10.9.0.1' }), r);
+    await chat(makeReq({ body: { prompt: 'test', capsule: 'Biketrip-col2', provider: 'gemini' }, ip: '10.9.0.1' }), r);
     assert.equal(r._.code, 200);
     const g1 = NET.captured.filter((c) => c.url.includes('generativelanguage')).map(bodyOf).pop();
     assert.equal(g1.generationConfig.thinkingConfig.thinkingBudget, 0, 'budget 0 sur 2.5-flash');
@@ -502,7 +521,7 @@ const fs = require('fs');
     process.env.GEMINI_MODEL = 'gemini-2.5-pro';
     NET.captured = [];
     r = makeRes();
-    await chat(makeReq({ body: { prompt: 'test', capsule: '212', provider: 'gemini' }, ip: '10.9.0.2' }), r);
+    await chat(makeReq({ body: { prompt: 'test', capsule: 'Biketrip-col2', provider: 'gemini' }, ip: '10.9.0.2' }), r);
     const g2 = NET.captured.filter((c) => c.url.includes('generativelanguage')).map(bodyOf).pop();
     assert.ok(!g2.generationConfig.thinkingConfig, 'aucun thinkingConfig hors 2.5-flash');
     assert.equal(g2.generationConfig.maxOutputTokens, 700);
@@ -529,7 +548,7 @@ const fs = require('fs');
   await t('juge : [APPROUVE] → win:true, tag retiré du verdict', async () => {
     NET.mistral = 'approve';
     const r = makeRes();
-    await chat(makeReq({ body: { action: 'validate', capsule: '201',
+    await chatJudge(makeReq({ body: { action: 'validate', capsule: '_testjuge',
       history: [{ role: 'user', content: 'De 14h à 18h à Gràcia, culturel et insolite, à pied, petit budget.' }] },
       ip: '10.1.0.1' }), r);
     assert.equal(r._.code, 200);
@@ -541,7 +560,7 @@ const fs = require('fs');
   await t('juge : [REJETE] → win:false + explication pédagogique', async () => {
     NET.mistral = 'reject';
     const r = makeRes();
-    await chat(makeReq({ body: { action: 'validate', capsule: '201',
+    await chatJudge(makeReq({ body: { action: 'validate', capsule: '_testjuge',
       history: [{ role: 'user', content: 'Un après-midi à Barcelone stp' }] },
       ip: '10.1.0.2' }), r);
     assert.equal(r._.code, 200);
@@ -552,12 +571,16 @@ const fs = require('fs');
 
   await t('juge : défi sans critères → validé d\'office, jamais de crash', async () => {
     const r = makeRes();
-    await chat(makeReq({ body: { action: 'validate', capsule: '212',
+    await chat(makeReq({ body: { action: 'validate', capsule: 'Biketrip-col2',
       history: [{ role: 'user', content: 'x' }] }, ip: '10.1.0.3' }), r);
     assert.equal(r._.code, 200);
     assert.equal(r._.body.win, true);
     assert.ok(r._.body.text.includes('Audit indisponible'));
   });
+
+  /* ══ Fin de la fixture Juge : CSV de prod restauré à l'identique ══ */
+  fs.writeFileSync(JUDGE_CSV, JUDGE_ORIG);
+  delete require.cache[require.resolve('../api/chat.js')];
 
   await t('inkFor : encre par NIVEAU (vert/bleu/rouge/or), stable', async () => {
     const h = fs.readFileSync('index.html', 'utf8');
@@ -596,25 +619,25 @@ const fs = require('fs');
       'ouverture exclue de l\'export MD');
   });
 
-  await t('ouverture (bonus) : colonne présente, 104 duel porte 2 répliques A;;B', async () => {
+  await t('ouverture (bonus) : colonne présente, duel-301 porte 2 répliques A;;B', async () => {
     const fs2 = require('fs');
     const srcC = fs2.readFileSync('api/chat.js', 'utf8');
     eval(srcC.slice(srcC.indexOf('function parseCSV'), srcC.indexOf('// --- Prompts externalisés')));
     const rows2 = parseCSV(fs2.readFileSync('content/defis.csv', 'utf8'));
     assert.ok(rows2.every(r => 'ouverture' in r), 'colonne ouverture sur toutes les lignes');
-    const d104 = rows2.find(r => r.id === '104');
-    assert.ok(d104 && d104.ouverture.includes(';;'), '104 : ouverture duel avec séparateur A;;B');
+    const d104 = rows2.find(r => r.id === 'duel-301');
+    assert.ok(d104 && d104.ouverture.includes(';;'), 'duel-301 : ouverture duel avec séparateur A;;B');
     // non-régression : la grande majorité des défis n'ont PAS d'ouverture (bonus)
     const withOpening = rows2.filter(r => (r.ouverture || '').trim());
     assert.ok(withOpening.length >= 1 && withOpening.length < rows2.length, 'ouverture reste optionnelle');
   });
 
-  await t('defis.csv : 25 défis, 4 niveaux couverts, duel complet', async () => {
+  await t('defis.csv : 17 défis, 4 niveaux couverts, duel complet', async () => {
     const src = fs.readFileSync('api/chat.js', 'utf8');
     const fn = src.slice(src.indexOf('function parseCSV'), src.indexOf('// --- Prompts externalisés'));
     eval(fn);
-    const rows = parseCSV(fs.readFileSync('content/defis.csv', 'utf8'));
-    assert.equal(rows.length, 25);
+    const rows = parseCSV(fs.readFileSync('content/defis.csv', 'utf8')).filter((r) => r.id !== '_testjuge');
+    assert.equal(rows.length, 17);
     assert.deepEqual([...new Set(rows.map(r => r.niveau))].sort(), ['1', '2', '3', '4']);
     const duel = rows.find(r => r.mode === 'duel');
     assert.ok(duel && duel.sim && duel.sim2 && duel.contexte_ia);
@@ -623,13 +646,12 @@ const fs = require('fs');
     const pz = rows.find(r => r.mode === 'puzzle');
     assert.ok(pz && pz.data.split('|').length >= 4 && !pz.data.includes('*'), 'puzzle data');
     const rot = rows.find(r => r.mode === 'rotation');
-    assert.ok(rot && rot.data.includes('|'), 'rotation data (image|motMystere)');
+    assert.ok(rot && rot.data.trim().length > 0, 'rotation data (image seule, ou image|motMystere)');
     const intr = rows.find(r => r.mode === 'intrus');
     assert.ok(intr && 'urls_visuels' in intr && 'index_intrus' in intr && 'legendes' in intr && !('legende_intrus' in intr), 'colonnes intrus simplifiées');
-    const fin = rows.find(r => r.id === '401');
-    assert.ok(fin && fin.final === '1' && fin.chrono === '30', 'défi final 401 chronométré');
-    const finals = rows.filter(r => r.final === '1').map(r => r.id);
-    assert.ok(finals.includes('107') && finals.includes('401'), 'chaque palier peut avoir son final');
+    const dd = rows.find(r => r.id === 'duel-301');
+    assert.ok(dd && dd.gagnant === 'a' && dd.sim && dd.sim2, 'duel-301 complet (départage + démo)');
+    assert.equal(rows.filter(r => r.final === '1').length, 0, 'aucun défi final en prod (mécanique +20 dormante)');
     assert.ok(rows.every(r => 'chrono' in r && 'final' in r), 'colonnes chrono/final');
     assert.ok(rows.every(r => r.objectif && r.duree));
   });
