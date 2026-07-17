@@ -7,20 +7,29 @@
 
 // --- Rate-limiting en mémoire (par instance serverless : filet de sécurité,
 // pas une garantie absolue — suffisant pour tenir les tiers gratuits) ---
-const hits = new Map(); // ip -> { day, dayCount, minTs, minCount }
-const LIMIT_PER_DAY = 60;
-const LIMIT_PER_MIN = 8;
+const hits = new Map(); // clé ('c:'+code | 'ip:'+ip) -> { day, dayCount, minTs, minCount }
+/* Rate-limiting à DEUX ÉTAGES - pensé pour un déploiement à ~700 personnes
+   derrière des IP d'entreprise PARTAGÉES (NAT / VPN de site) :
+   · étage PERSONNEL : par code voyageur (ETE-XXXXX) fourni par le front →
+     chaque personne dispose de SON quota, l'IP partagée ne pénalise personne ;
+   · étage FILET : par IP, seuils larges → borne les abus massifs et couvre les
+     sessions déjà ouvertes dont le front n'envoie pas encore de code. */
+const LIMIT_CODE_MIN = 15;   /* messages / minute / personne */
+const LIMIT_CODE_DAY = 150;  /* messages / jour / personne */
+const LIMIT_IP_MIN   = 120;  /* filet : messages / minute / IP partagée */
+const LIMIT_IP_DAY   = 6000; /* filet : messages / jour / IP partagée */
+const CODE_RL_RE = /^ETE-[A-Z2-9]{5}$/;
 
-function rateLimited(ip) {
+function rateLimited(key, maxMin, maxDay) {
   const now = Date.now();
   const today = new Date().toISOString().slice(0, 10);
-  const h = hits.get(ip) || { day: today, dayCount: 0, minTs: now, minCount: 0 };
+  const h = hits.get(key) || { day: today, dayCount: 0, minTs: now, minCount: 0 };
   if (h.day !== today) { h.day = today; h.dayCount = 0; }
   if (now - h.minTs > 60_000) { h.minTs = now; h.minCount = 0; }
   h.dayCount++; h.minCount++;
-  hits.set(ip, h);
+  hits.set(key, h);
   if (hits.size > 5000) hits.clear(); // garde-fou mémoire
-  return h.dayCount > LIMIT_PER_DAY || h.minCount > LIMIT_PER_MIN;
+  return h.dayCount > maxDay || h.minCount > maxMin;
 }
 
 // --- System prompt épinglé côté serveur : le client ne peut pas le modifier ---
@@ -187,7 +196,11 @@ module.exports = async (req, res) => {
 
   // --- Rate-limiting ---
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'inconnu';
-  if (rateLimited(ip)) {
+  /* Étage personnel (code voyageur valide fourni) PUIS filet IP - les deux comptent. */
+  const rlCode = String((req.body && req.body.code) || '').trim().toUpperCase();
+  const overCode = CODE_RL_RE.test(rlCode)
+    ? rateLimited('c:' + rlCode, LIMIT_CODE_MIN, LIMIT_CODE_DAY) : false;
+  if (overCode || rateLimited('ip:' + ip, LIMIT_IP_MIN, LIMIT_IP_DAY)) {
     return res.status(429).json({ error: 'Doucement ! Réessaie dans une minute.' });
   }
 

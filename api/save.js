@@ -9,17 +9,20 @@
  *  - track : { action:'track', code, event, detail, prenom, palier } → ligne d'événement
  */
 
-const hits = new Map();
-const LIMIT_PER_MIN = 20;
+const hits = new Map(); // clé ('c:'+code | 'ip:'+ip) -> { ts, count }
+/* Deux étages, comme /api/chat : quota PERSONNEL par code voyageur (le code est
+   déjà dans chaque payload save/track), + FILET large par IP partagée (NAT). */
+const LIMIT_CODE_MIN = 30;   /* écritures / minute / personne (save + télémétrie) */
+const LIMIT_IP_MIN   = 300;  /* filet : écritures / minute / IP partagée */
 
-function rateLimited(ip) {
+function rateLimited(key, maxMin) {
   const now = Date.now();
-  const h = hits.get(ip) || { ts: now, count: 0 };
+  const h = hits.get(key) || { ts: now, count: 0 };
   if (now - h.ts > 60_000) { h.ts = now; h.count = 0; }
   h.count++;
-  hits.set(ip, h);
+  hits.set(key, h);
   if (hits.size > 5000) hits.clear();
-  return h.count > LIMIT_PER_MIN;
+  return h.count > maxMin;
 }
 
 const CODE_RE = /^ETE-[A-Z2-9]{5}$/;
@@ -39,7 +42,9 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST uniquement' });
 
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'inconnu';
-  if (rateLimited(ip)) return res.status(429).json({ error: 'Trop de requêtes' });
+  const rlCode = String((req.body && req.body.code) || '').trim().toUpperCase();
+  const overCode = CODE_RE.test(rlCode) ? rateLimited('c:' + rlCode, LIMIT_CODE_MIN) : false;
+  if (overCode || rateLimited('ip:' + ip, LIMIT_IP_MIN)) return res.status(429).json({ error: 'Trop de requêtes' });
 
   const { action, code, state, event, detail, prenom, palier } = req.body || {};
   if (!ACTIONS.has(action)) return res.status(400).json({ error: 'Action inconnue' });
