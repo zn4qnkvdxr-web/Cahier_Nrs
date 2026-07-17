@@ -10,7 +10,7 @@
 <!-- ═══ FAVICON : pour le changer, remplacer icons/favicon.svg (et les PNG du dossier icons/) ═══ -->
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
-<meta name="description" content="Le cahier de vacances IA : Des escales, 15 minutes par escale, sans compte. Rendez-vous en septembre.">
+<meta name="description" content="Le cahier de vacances IA : Des escales, 15 minutes par semaine, sans compte. Rendez-vous en septembre.">
 <title>Mon été IA - Cahier de vacances</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -751,7 +751,7 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
     <!-- [5] Marquee -->
     <div class="marquee" aria-hidden="true">
       <div class="track" id="mqTrack">
-        <span>☀ Des escales</span><span>✷ 15 à 30 minutes par escale</span><span>☀ Zéro jargon</span><span>✷ Un tampon par défi</span><span>☀ Du prompt à l'agent</span><span>✷ Rendez-vous en septembre</span>
+        <span>☀ Des escales</span><span>✷ 15 à 30 minutes par semaine</span><span>☀ Zéro jargon</span><span>✷ Un tampon par défi</span><span>☀ Du prompt à l'agent</span><span>✷ Rendez-vous en septembre</span>
       </div>
     </div>
     <!-- [6] Trois temps -->
@@ -1165,7 +1165,7 @@ async function runAudit(c){
       try{
         r=await fetch(CONFIG.API_BASE+'/api/chat',{method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({action:'validate', capsule:c.id, history:api})});
+          body:JSON.stringify({action:'validate', capsule:c.id, history:api, code:state.code})});
       }catch(neterr){
         /* SEULE vraie panne réseau : fetch qui rejette (hors-ligne, DNS…) */
         console.warn('audit : réseau injoignable', neterr);
@@ -1996,7 +1996,7 @@ function initRotation(c, zone){
           'sinon « NON | » suivi d\'un indice bref (20 mots max) qui aiguille sans révéler le mot.';
         const r=await fetch(CONFIG.API_BASE+'/api/chat',{method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({prompt:ask, capsule:c.id})});
+          body:JSON.stringify({prompt:ask, capsule:c.id, code:state.code})});
         if(!r.ok) throw new Error('HTTP '+r.status);
         const d=await r.json();
         const txt=String(d.text||'').trim();
@@ -2315,7 +2315,7 @@ async function duelAnswer(c){
          terminé - intégrité totale de chaque génération, zéro interférence. */
       const call=prov=>fetch(CONFIG.API_BASE+'/api/chat',{method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({prompt, capsule:c.id, provider:prov})
+        body:JSON.stringify({prompt, capsule:c.id, provider:prov, code:state.code})
       }).then(r=>{ if(!r.ok) throw 0; return r.json(); });
       startThinking(A);
       try{ const ra=await call('mistral'); ta=ra.text||'(vide)'; }
@@ -2358,7 +2358,7 @@ async function simAnswer(c){
       try{
         const r=await fetch(CONFIG.API_BASE+'/api/chat',{method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({prompt: used, capsule:c.id})});
+          body:JSON.stringify({prompt: used, capsule:c.id, code:state.code})});
         if(!r.ok) throw new Error('HTTP '+r.status);
         const d=await r.json();
         txt=d.text || '(réponse vide)'; prov=d.provider||'';
