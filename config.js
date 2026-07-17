@@ -43,6 +43,7 @@ window.CV_CONFIG = {
       { nom: 'Matthieu',   role: 'Contenu des escales' },
       { nom: 'Gertrude',   role: 'Contenu des escales & recette' },
       { nom: 'Virginia',   role: 'Relecture & recette' },
+      { nom: 'Sophie',   role: 'Sponsor' },
     ],
     MENTION: "Besoin d'un coup de pouce, une question, un retour ? Alors écrivez-nous sur cahier_de_vacances_IA@norsys.fr",
   },
