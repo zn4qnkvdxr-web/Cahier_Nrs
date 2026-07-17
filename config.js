@@ -27,7 +27,7 @@ window.CV_CONFIG = {
   // « Rendez-vous en Septembre » - CTA d'intérêt (mailto) affiché sous le bandeau.
   // CTA:false pour masquer le bouton sans aucun impact graphique sur le bloc.
   SEPTEMBRE: {
-    CTA: true,
+    CTA: false,
     MAILTO: 'mailto:cahier_de_vacances_IA@norsys.fr?subject=' +
             encodeURIComponent('Cahier de vacances IA - Suite des aventures'),
   },
