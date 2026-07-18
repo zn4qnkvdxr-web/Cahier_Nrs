@@ -367,7 +367,7 @@ module.exports = async (req, res) => {
 // `wasCut` vient du signal OFFICIEL de l'API (finish_reason / finishReason) : on
 // ne devine pas la casse à la ponctuation, sinon toute réponse finissant
 // légitimement sur une liste, un emoji ou un deux-points serait mutilée à tort.
-const MAX_REPLY_CHARS = 2800;
+const MAX_REPLY_CHARS = 2200;
 function capLength(text, wasCut) {
   let t = String(text || '').trim();
   if (!t) return t;                          /* vide → vide : le repli « réponse vide » doit rester déclenchable */
@@ -395,7 +395,7 @@ async function callMistral(userPrompt, systemPrompt, historyMsgs) {
       messages: [{ role: 'system', content: systemPrompt }].concat(
         historyMsgs || [{ role: 'user', content: userPrompt }]
       ),
-      max_tokens: 1000,
+      max_tokens: 750,
       temperature: 0.6,
     }),
   });
@@ -436,7 +436,7 @@ async function callGemini(userPrompt, systemPrompt, historyMsgs) {
       // envoyé uniquement aux modèles 2.5-flash* (qui l'acceptent) ; 2.5-pro le
       // refuse, et tout autre modèle surchargé via GEMINI_MODEL reste intact.
       generationConfig: Object.assign(
-        { maxOutputTokens: 1000, temperature: 0.6 },
+        { maxOutputTokens: 750, temperature: 0.6 },
         model.includes('2.5-flash') ? { thinkingConfig: { thinkingBudget: 0 } } : {}
       ),
     }),
