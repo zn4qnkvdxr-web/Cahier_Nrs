@@ -2315,7 +2315,8 @@ async function duelAnswer(c){
          terminé - intégrité totale de chaque génération, zéro interférence. */
       const call=prov=>fetch(CONFIG.API_BASE+'/api/chat',{method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({prompt, capsule:c.id, provider:prov, code:state.code})
+        body:JSON.stringify({prompt, history:buildApiHistory(hist, prov==='mistral'?'a':'b'),
+          capsule:c.id, provider:prov, code:state.code})
       }).then(r=>{ if(!r.ok) throw 0; return r.json(); });
       startThinking(A);
       try{ const ra=await call('mistral'); ta=ra.text||'(vide)'; }
@@ -2338,6 +2339,39 @@ async function duelAnswer(c){
   } finally { unlockAsk(); }
 }
 
+/* ═══ Mémoire de conversation : compose l'historique API depuis le fil local.
+   Règles :
+   · seuls les VRAIS tours partent (l'ouverture scriptée p:'opening' et les
+     notes systèmes - audits, indices - restent locales) ;
+   · duel : chaque camp reçoit SES répliques en rôle assistant, et celles de
+     sa rivale ÉTIQUETÉES dans le message user suivant (« [Réponse de l'autre
+     IA] : … ») - jamais en assistant, une IA ne doit pas croire avoir écrit
+     les répliques de l'autre ;
+   · rôles identiques consécutifs fusionnés (les API exigent l'alternance) ;
+   · fenêtre : 12 derniers messages (alignée sur la borne serveur), ouverture
+     garantie sur un message user. ═══ */
+function buildApiHistory(hist, camp){
+  const msgs=[];
+  const push=(role,content)=>{
+    const t=String(content||'').trim(); if(!t) return;
+    const last=msgs[msgs.length-1];
+    if(last && last.role===role){ last.content+='\n\n'+t; }
+    else msgs.push({role, content:t});
+  };
+  for(const m of (hist||[])){
+    if(!m || m.p==='opening') continue;
+    if(m.r==='u') push('user', m.t);
+    else if(m.r==='a' && !camp) push('assistant', m.t);
+    else if(m.r==='d' && camp){
+      push('assistant', camp==='a' ? m.a : m.b);
+      push('user', "[Réponse de l'autre IA] : " + ((camp==='a' ? m.b : m.a) || ''));
+    }
+  }
+  const out = msgs.slice(-12);
+  while(out.length && out[0].role!=='user') out.shift();  /* ouvrir sur user (exigence API) */
+  return out;
+}
+
 async function simAnswer(c){
   if(c.mode==='duel') return duelAnswer(c);
   if(genBusy) return;
@@ -2358,7 +2392,7 @@ async function simAnswer(c){
       try{
         const r=await fetch(CONFIG.API_BASE+'/api/chat',{method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({prompt: used, capsule:c.id, code:state.code})});
+          body:JSON.stringify({prompt: used, history:buildApiHistory(hist), capsule:c.id, code:state.code})});
         if(!r.ok) throw new Error('HTTP '+r.status);
         const d=await r.json();
         txt=d.text || '(réponse vide)'; prov=d.provider||'';
