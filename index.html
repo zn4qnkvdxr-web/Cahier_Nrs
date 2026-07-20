@@ -1315,6 +1315,18 @@ function trackEvent(ev,detail){
     body:JSON.stringify({action:'track',code:state.code,event:ev,detail:detail||'',prenom:state.name,palier:state.palier})
   }).catch(()=>{});
 }
+/* Traceur d'incident : émet un événement 'fallback' quand l'appli bascule en démo,
+   avec la cause (blocage 429 / panne serveur / réseau). N'ajoute AUCUN comportement
+   visible - réutilise trackEvent (déjà silencieux et sans effet en mode démo). */
+function trackFallback(e){
+  if(CONFIG.DEMO) return;
+  var msg=(e&&e.message)?String(e.message):'';
+  var cause = /\b429\b/.test(msg) ? 'bloque_429'
+            : /\b5\d\d\b/.test(msg) ? 'panne_5xx'
+            : /\b40\d\b/.test(msg) ? 'erreur_4xx'
+            : 'panne_reseau';
+  trackEvent('fallback', cause);
+}
 function genCode(){const s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<5;i++)c+=s[Math.floor(Math.random()*s.length)];return 'ETE-'+c;}
 function genAnon(){const s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<4;i++)c+=s[Math.floor(Math.random()*s.length)];return 'Voyageur-'+c;}
 
@@ -2320,11 +2332,11 @@ async function duelAnswer(c){
       }).then(r=>{ if(!r.ok) throw 0; return r.json(); });
       startThinking(A);
       try{ const ra=await call('mistral'); ta=ra.text||'(vide)'; }
-      catch(e){ ta=c.sim || 'Mistral fait la sieste - réessaie.'; }
+      catch(e){ trackFallback(e); ta=c.sim || 'Mistral fait la sieste - réessaie.'; }
       await settleAnswer(A, ta);
       startThinking(B);
       try{ const rb=await call('gemini'); tb=rb.text||'(vide)'; }
-      catch(e){ tb=c.sim2 || 'Gemini fait la sieste - réessaie.'; }
+      catch(e){ trackFallback(e); tb=c.sim2 || 'Gemini fait la sieste - réessaie.'; }
       await settleAnswer(B, tb);
     }
     hist.push({r:'d',a:ta.slice(0,6000),b:tb.slice(0,6000)});
@@ -2396,7 +2408,7 @@ async function simAnswer(c){
         if(!r.ok) throw new Error('HTTP '+r.status);
         const d=await r.json();
         txt=d.text || '(réponse vide)'; prov=d.provider||'';
-      }catch(e){ console.warn('API /api/chat indisponible → réponse démo', e); txt=''; }
+      }catch(e){ console.warn('API /api/chat indisponible → réponse démo', e); trackFallback(e); txt=''; }
     }
     if(!txt){ await new Promise(r=>setTimeout(r, reduce?80:650)); txt=c.sim||''; prov='demo'; }
     el.querySelector('.who').textContent=provLabel(prov);
