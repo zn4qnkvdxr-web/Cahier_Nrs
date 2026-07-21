@@ -1095,7 +1095,7 @@ function armDuelChoice(c){
   z.innerHTML='<span class="mt">⚖️ Une de ces deux réponses est fiable, l\'autre non. Laquelle valides-tu ?</span>'+
     '<span class="pick-btns"><button class="btn btn-primary" type="button" data-p="a">Réponse A</button>'+
     '<button class="btn btn-primary" type="button" data-p="b">Réponse B</button></span>';
-  th.appendChild(z); bubbleIn(z); peekReveal(z);
+  th.appendChild(z); bubbleIn(z); syncToBottomBtn();
   z.querySelectorAll('button').forEach(b=>b.onclick=()=>{
     if(z.dataset.done) return;
     z.dataset.done='1';
@@ -2251,7 +2251,7 @@ function provLabel(p){
        : p==='gemini'  ? 'Gemini · Google'
        : p==='demo'    ? 'Réponse (démo)' : "Réponse de l'IA";
 }
-function addMsg(role, text, chip){
+function addMsg(role, text, chip, noScroll){
   const th=threadEl(); if(!th) return null;
   const el=document.createElement('div'); el.className='msg '+role;
   if(chip){ const w=document.createElement('span'); w.className='who'; w.textContent=chip; el.appendChild(w); }
@@ -2262,7 +2262,7 @@ function addMsg(role, text, chip){
      (audit, verdict, indice) est révélée en douceur ; les bulles restaurées et
      l'ouverture ne déclenchent aucun défilement (affichage initial déjà correct). */
   if(role==='u') threadScroll(true);
-  else if(role==='note') peekReveal(el);
+  else if(role==='note'){ if(noScroll) syncToBottomBtn(); else peekReveal(el); }
   else syncToBottomBtn();
   return el;
 }
@@ -2345,7 +2345,7 @@ async function duelAnswer(c){
     else {
       const th=threadEl();
       if(th && !th.querySelector('.msg.note'))
-        addMsg('note','🔍 Compare : le ton ? la structure ? une info qui diverge (et mérite vérification) ?');
+        addMsg('note','🔍 Compare : le ton ? la structure ? une info qui diverge (et mérite vérification) ?', undefined, true);
     }
     enableValidate(); trackEvent('duel', c.id);
   } finally { unlockAsk(); }
