@@ -2279,22 +2279,22 @@ function aiBubble(parent, chip){
   parent.appendChild(el);
   return el;
 }
-function startThinking(el){
+function startThinking(el, noScroll){
   const t=el.querySelector('.mt');
   t.innerHTML='<span class="dots" aria-label="Réflexion en cours"><i></i><i></i><i></i></span>';
   if(window.gsap && !reduce){
     el._dots=gsap.to(t.querySelectorAll('.dots i'),
       {y:-5,duration:.4,ease:'sine.inOut',stagger:.13,repeat:-1,yoyo:true});
   }
-  peekReveal(el);
+  if(noScroll) syncToBottomBtn(); else peekReveal(el);
 }
-async function settleAnswer(el, text){
+async function settleAnswer(el, text, noScroll){
   if(el._dots){ el._dots.kill(); el._dots=null; }
   const t=el.querySelector('.mt'); t.textContent='';
   /* Compensation douce : le début de la réponse (2-3 lignes) est révélé juste
      au-dessus de la saisie ; la flèche ↓ reste le moyen d'aller tout en bas. */
   await revealText(t, text, ()=>syncToBottomBtn());
-  peekReveal(el);
+  if(noScroll) syncToBottomBtn(); else peekReveal(el);
 }
 
 async function duelAnswer(c){
@@ -2319,9 +2319,9 @@ async function duelAnswer(c){
       startThinking(A);
       await new Promise(r=>setTimeout(r, reduce?80:600));
       ta=c.sim||''; await settleAnswer(A, ta);
-      startThinking(B);
+      startThinking(B, true);
       await new Promise(r=>setTimeout(r, reduce?80:600));
-      tb=c.sim2||c.sim||''; await settleAnswer(B, tb);
+      tb=c.sim2||c.sim||''; await settleAnswer(B, tb, true);
     } else {
       /* Séquentiel chaîné : la 2e IA ne part QUE lorsque la 1re a entièrement
          terminé - intégrité totale de chaque génération, zéro interférence. */
@@ -2334,10 +2334,10 @@ async function duelAnswer(c){
       try{ const ra=await call('mistral'); ta=ra.text||'(vide)'; }
       catch(e){ trackFallback(e); ta=c.sim || 'Mistral fait la sieste - réessaie.'; }
       await settleAnswer(A, ta);
-      startThinking(B);
+      startThinking(B, true);
       try{ const rb=await call('gemini'); tb=rb.text||'(vide)'; }
       catch(e){ trackFallback(e); tb=c.sim2 || 'Gemini fait la sieste - réessaie.'; }
-      await settleAnswer(B, tb);
+      await settleAnswer(B, tb, true);
     }
     hist.push({r:'d',a:ta.slice(0,6000),b:tb.slice(0,6000)});
     saveTrace(c.id,{m:'duel',h:hist,q:prompt,a:ta.slice(0,6000),b:tb.slice(0,6000)}); /* persistance (IA) */
