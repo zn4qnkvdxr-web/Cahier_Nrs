@@ -53,12 +53,12 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 /* ── UI ── */
 .ui{position:relative;z-index:10;min-height:100%;box-sizing:border-box;
   display:flex;flex-direction:column;
-  align-items:center;padding:clamp(14px,3.5vh,34px) 14px;gap:clamp(10px,2.4vh,22px)}
+  align-items:center;padding:clamp(10px,2vh,20px) 14px;gap:clamp(6px,1.4vh,12px)}
 .gtx{background:linear-gradient(180deg,#ffe14d 0%,#ff9518 55%,#ff2d1a 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
   filter:drop-shadow(0 2px 0 rgba(0,0,0,.9)) drop-shadow(0 0 10px rgba(0,0,0,.65))}
 .hd{text-align:center}
-.hd h1{font-size:clamp(13px,3.4vw,30px);letter-spacing:.06em;line-height:1.5}
+.hd h1{font-size:clamp(12px,2.9vw,26px);letter-spacing:.05em;line-height:1.3}
 .hd .sub{margin-top:10px;font-size:clamp(7px,1.5vw,11px);color:#7fe3a0;
   text-shadow:0 0 8px rgba(90,255,150,.6)}
 .hd .sub .dot{display:inline-block;width:.7em;height:.7em;border-radius:50%;
@@ -68,11 +68,11 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 
 /* grille des scores : alignement strict, lisible sur toute image */
 .board{width:min(940px,96vw);flex:1 0 auto;display:flex;flex-direction:column;
-  justify-content:center;gap:clamp(6px,1.5vh,14px)}
-.row{display:grid;grid-template-columns:4.5ch minmax(0,1fr) 6ch 8ch;
+  justify-content:flex-start;gap:clamp(3px,.9vh,8px)}
+.row{display:grid;grid-template-columns:4.5ch minmax(0,1fr) 7ch 7ch;
   gap:2ch;align-items:baseline;
-  font-size:clamp(9px,2.1vw,19px);line-height:1.4;padding:2px 6px}
-.row.head{font-size:clamp(7px,1.4vw,11px);color:#8ea2ff;
+  font-size:clamp(8px,1.8vw,16px);line-height:1.35;padding:2px 6px}
+.row.head{color:#8ea2ff;
   text-shadow:0 2px 0 #000, 0 0 8px rgba(0,0,0,.8);padding-bottom:6px}
 .row .r{text-align:left}
 .row.head .r,.row.head .n,.row.head .t,.row.head .s{text-align:inherit}
@@ -140,7 +140,7 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 <main class="ui" id="ui">
   <header class="hd">
     <h1 class="gtx" id="title">☀ LES VOYAGEURS DE L'ÉTÉ ☀</h1>
-    <p class="sub"><span class="dot"></span>LIVE · RESTITUTION 24 SEPT</p>
+    
   </header>
   <section class="board" id="board" aria-live="polite"></section>
   <nav class="pager" id="pager" hidden>
@@ -425,7 +425,7 @@ function render(){
   });
   if(G.racers.length){
     var course = document.createElement('div'); course.className = 'coursetitle gtx';
-    course.textContent = G.champions.length ? 'LA COURSE' : '';
+    course.textContent = G.champions.length ? 'EN COURSE' : '';
     if(G.champions.length) b.appendChild(course);
     b.appendChild(head);
   }
