@@ -22,7 +22,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
-  overflow:hidden;-webkit-font-smoothing:none}
+  overflow-x:hidden;overflow-y:auto;-webkit-font-smoothing:none}
 
 /* ── Fond : diaporama sous le filtre CRT global ── */
 .bg{position:fixed;inset:0;z-index:0;background:
@@ -51,7 +51,8 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
   box-shadow:0 0 18px 4px #cfe9ff, 0 0 60px 10px rgba(150,200,255,.7)}
 
 /* ── UI ── */
-.ui{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;
+.ui{position:relative;z-index:10;min-height:100%;box-sizing:border-box;
+  display:flex;flex-direction:column;
   align-items:center;padding:clamp(14px,3.5vh,34px) 14px;gap:clamp(10px,2.4vh,22px)}
 .gtx{background:linear-gradient(180deg,#ffe14d 0%,#ff9518 55%,#ff2d1a 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
@@ -66,7 +67,7 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 @keyframes blink{50%{opacity:.15}}
 
 /* grille des scores : alignement strict, lisible sur toute image */
-.board{width:min(940px,96vw);flex:1;display:flex;flex-direction:column;
+.board{width:min(940px,96vw);flex:1 0 auto;display:flex;flex-direction:column;
   justify-content:center;gap:clamp(6px,1.5vh,14px)}
 .row{display:grid;grid-template-columns:4.5ch minmax(0,1fr) 6ch 8ch;
   gap:2ch;align-items:baseline;
@@ -74,6 +75,8 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 .row.head{font-size:clamp(7px,1.4vw,11px);color:#8ea2ff;
   text-shadow:0 2px 0 #000, 0 0 8px rgba(0,0,0,.8);padding-bottom:6px}
 .row .r{text-align:left}
+.row.head .r,.row.head .n,.row.head .t,.row.head .s{text-align:inherit}
+.row.head .t,.row.head .s{text-align:right}
 .row .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row .n .souv{font-family:system-ui;font-size:.9em;margin-left:.5ch;
   filter:none;-webkit-text-fill-color:initial}
@@ -96,15 +99,24 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 .ft{display:flex;flex-wrap:wrap;justify-content:center;gap:1.6ch 3.5ch;
   font-size:clamp(7px,1.4vw,11px);color:#9fb4ff;text-shadow:0 2px 0 #000;text-align:center}
 .ft b{color:#fff}
-.hof{margin:0 0 clamp(10px,2.5vw,20px);padding:clamp(6px,1.5vw,12px);
-  border:1px solid rgba(255,225,77,.35);border-radius:6px;
+.hof{width:min(940px,96vw);margin:0 0 clamp(10px,2.5vw,20px);padding:clamp(8px,1.8vw,14px);
+  border:1px solid rgba(255,225,77,.35);border-radius:6px;box-sizing:border-box;
   background:linear-gradient(180deg,rgba(255,225,77,.08),rgba(255,149,24,.03))}
 .hoftitle{font-size:clamp(9px,1.9vw,15px);text-align:center;letter-spacing:.12em;
-  margin-bottom:clamp(4px,1vw,8px);filter:drop-shadow(0 0 6px rgba(255,180,40,.5))}
-.hofrow{grid-template-columns:1fr!important;justify-items:center;
-  font-size:clamp(9px,1.9vw,15px);padding:clamp(2px,.6vw,5px) 0}
-.coursetitle{font-size:clamp(8px,1.5vw,12px);color:#8ea2ff;letter-spacing:.14em;
-  text-align:left;margin:clamp(6px,1.5vw,12px) 0 clamp(2px,.6vw,5px);opacity:.85}
+  margin-bottom:clamp(6px,1.4vw,12px);filter:drop-shadow(0 0 6px rgba(255,180,40,.5))}
+.hofgrid{display:grid;grid-template-columns:repeat(3,1fr);
+  gap:clamp(4px,1.2vw,10px) clamp(8px,2vw,18px)}
+.hofcell{font-size:clamp(8px,1.7vw,15px);text-align:center;line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:clamp(2px,.5vw,4px) 0}
+.hofnav{display:flex;justify-content:center;align-items:center;gap:1.4ch;
+  margin-top:clamp(6px,1.4vw,12px)}
+.hofbtn{background:rgba(255,180,40,.14);border:1px solid rgba(255,200,80,.5);
+  color:#ffd050;font-family:inherit;font-size:clamp(8px,1.4vw,12px);
+  padding:.3em .7em;border-radius:4px;cursor:pointer}
+.hofbtn:hover{background:rgba(255,180,40,.28)}
+.hofpg{font-size:clamp(8px,1.4vw,12px);min-width:4ch;text-align:center}
+.coursetitle{width:min(940px,96vw);font-size:clamp(8px,1.5vw,12px);color:#8ea2ff;
+  letter-spacing:.14em;text-align:left;margin:clamp(6px,1.5vw,12px) 0 clamp(2px,.6vw,5px);opacity:.85}
 .coin{color:#ffe14d;animation:blink 1.15s steps(2) infinite;
   text-shadow:0 0 10px rgba(255,225,77,.7)}
 .maj{position:fixed;left:12px;bottom:10px;z-index:12;font-size:8px;color:#5b6aa0}
@@ -299,7 +311,7 @@ function startSlideshow(urls){
 }
 
 /* ══════════ 4. DONNÉES + RENDU ══════════ */
-var DATA = null, page = 0, autoT = null, pauseUntil = 0;
+var DATA = null, page = 0, hofPage = 0, autoT = null, pauseUntil = 0;
 
 function ordinal(i){ return i === 0 ? '1ER' : (i + 1) + 'E'; }
 function scramble(el, finalText){
@@ -361,25 +373,46 @@ function render(){
   }
   var G = splitGroups();
 
-  /* ── HALL OF FAME (finisseurs, ordre aléatoire qui tourne) ── */
+  /* ── HALL OF FAME (finisseurs, 3 colonnes, pagination interne du bloc) ── */
   if(G.champions.length){
     var hof = document.createElement('div'); hof.className = 'hof';
     var hoftitle = document.createElement('div'); hoftitle.className = 'hoftitle gtx';
     hoftitle.textContent = '★ HALL OF FAME · 100% ★';
     hof.appendChild(hoftitle);
-    shuffle(G.champions).forEach(function(p, j){
-      var row = document.createElement('div'); row.className = 'row hofrow';
+    /* ordre aléatoire figé pour la session (ne re-mélange pas à chaque page interne) */
+    if(!DATA._hofOrder) DATA._hofOrder = shuffle(G.champions);
+    var champs = DATA._hofOrder;
+    var HOF_PER = 18;                       /* 3 colonnes × 6 lignes par page interne */
+    var hofPages = Math.max(1, Math.ceil(champs.length / HOF_PER));
+    if(hofPage >= hofPages) hofPage = 0;
+    var hstart = hofPage * HOF_PER;
+    var grid = document.createElement('div'); grid.className = 'hofgrid';
+    champs.slice(hstart, hstart + HOF_PER).forEach(function(p, j){
+      var cellw = document.createElement('div'); cellw.className = 'hofcell';
       var n = cell('n', (p.name || 'VOYAGEUR').toUpperCase().slice(0, 14), true);
       if(p.themes && p.themes.length){
         var sv = document.createElement('span'); sv.className = 'souv';
         sv.textContent = p.themes.map(function(t){ return SOUV[t] || ''; }).join('');
         n.appendChild(sv);
       }
-      row.appendChild(n);
-      hof.appendChild(row);
+      cellw.appendChild(n);
+      grid.appendChild(cellw);
       if(window.gsap && !reduce)
-        gsap.from(row, {opacity:0, scale:.94, duration:.35, delay:j * .05, ease:'power2.out'});
+        gsap.from(cellw, {opacity:0, scale:.94, duration:.35, delay:j * .04, ease:'power2.out'});
     });
+    hof.appendChild(grid);
+    /* pagination INTERNE du Hall of Fame (uniquement si > 1 page) */
+    if(hofPages > 1){
+      var hnav = document.createElement('div'); hnav.className = 'hofnav';
+      var hprev = document.createElement('button'); hprev.className = 'hofbtn'; hprev.textContent = '◄';
+      var hlbl = document.createElement('span'); hlbl.className = 'hofpg gtx';
+      hlbl.textContent = (hofPage + 1) + '/' + hofPages;
+      var hnext = document.createElement('button'); hnext.className = 'hofbtn'; hnext.textContent = '►';
+      hprev.onclick = function(){ hofPage = (hofPage - 1 + hofPages) % hofPages; render(); };
+      hnext.onclick = function(){ hofPage = (hofPage + 1) % hofPages; render(); };
+      hnav.appendChild(hprev); hnav.appendChild(hlbl); hnav.appendChild(hnext);
+      hof.appendChild(hnav);
+    }
     b.appendChild(hof);
   }
 
