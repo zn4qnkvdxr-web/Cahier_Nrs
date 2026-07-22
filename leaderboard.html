@@ -106,9 +106,10 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
   background:linear-gradient(180deg,rgba(255,225,77,.08),rgba(255,149,24,.03))}
 .hoftitle{font-size:clamp(9px,1.9vw,15px);text-align:center;letter-spacing:.12em;
   margin-bottom:clamp(6px,1.4vw,12px);filter:drop-shadow(0 0 6px rgba(255,180,40,.5))}
-.hofgrid{display:grid;grid-template-columns:repeat(3,1fr);
+.hofgrid{display:flex;flex-wrap:wrap;justify-content:center;
   gap:clamp(4px,1.2vw,10px) clamp(8px,2vw,18px)}
-.hofcell{font-size:clamp(8px,1.7vw,15px);text-align:center;line-height:1.4;
+.hofcell{flex:0 0 calc(33.333% - clamp(8px,2vw,18px));
+  font-size:clamp(8px,1.7vw,15px);text-align:center;line-height:1.4;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:clamp(2px,.5vw,4px) 0}
 .hofnav{display:flex;justify-content:center;align-items:center;gap:1.4ch;
   margin-top:clamp(6px,1.4vw,12px)}
@@ -384,12 +385,13 @@ function render(){
     /* ordre aléatoire figé pour la session (ne re-mélange pas à chaque page interne) */
     if(!DATA._hofOrder) DATA._hofOrder = shuffle(G.champions);
     var champs = DATA._hofOrder;
-    var HOF_PER = 18;                       /* 3 colonnes × 6 lignes par page interne */
+    var HOF_PER = 12;                       /* 3 colonnes × 4 lignes par page interne */
     var hofPages = Math.max(1, Math.ceil(champs.length / HOF_PER));
     if(hofPage >= hofPages) hofPage = 0;
     var hstart = hofPage * HOF_PER;
     var grid = document.createElement('div'); grid.className = 'hofgrid';
-    champs.slice(hstart, hstart + HOF_PER).forEach(function(p, j){
+    var pageItems = champs.slice(hstart, hstart + HOF_PER);
+    pageItems.forEach(function(p, j){
       var cellw = document.createElement('div'); cellw.className = 'hofcell';
       var n = cell('n', (p.name || 'VOYAGEUR').toUpperCase().slice(0, 14), true);
       if(p.themes && p.themes.length){
