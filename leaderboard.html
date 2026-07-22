@@ -86,7 +86,9 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
   text-shadow:0 2px 0 #000;line-height:2}
 
 /* pagination */
-.pager{display:flex;align-items:center;gap:2.2ch;font-size:clamp(8px,1.6vw,12px)}
+.pager{display:flex;align-items:center;gap:2.2ch;font-size:clamp(8px,1.6vw,12px);margin-top:auto}
+/* si la pagination est masquée (1 seule page), le pied de page prend le ressort du bas */
+.pager[hidden]+.ft{margin-top:auto}
 .pager button{background:none;border:2px solid #ffb020;color:#ffb020;cursor:pointer;
   font:inherit;padding:8px 12px;text-shadow:0 0 8px rgba(255,176,32,.5);
   box-shadow:0 0 10px rgba(255,176,32,.25), inset 0 0 8px rgba(255,176,32,.12)}
