@@ -96,6 +96,15 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 .ft{display:flex;flex-wrap:wrap;justify-content:center;gap:1.6ch 3.5ch;
   font-size:clamp(7px,1.4vw,11px);color:#9fb4ff;text-shadow:0 2px 0 #000;text-align:center}
 .ft b{color:#fff}
+.hof{margin:0 0 clamp(10px,2.5vw,20px);padding:clamp(6px,1.5vw,12px);
+  border:1px solid rgba(255,225,77,.35);border-radius:6px;
+  background:linear-gradient(180deg,rgba(255,225,77,.08),rgba(255,149,24,.03))}
+.hoftitle{font-size:clamp(9px,1.9vw,15px);text-align:center;letter-spacing:.12em;
+  margin-bottom:clamp(4px,1vw,8px);filter:drop-shadow(0 0 6px rgba(255,180,40,.5))}
+.hofrow{grid-template-columns:1fr!important;justify-items:center;
+  font-size:clamp(9px,1.9vw,15px);padding:clamp(2px,.6vw,5px) 0}
+.coursetitle{font-size:clamp(8px,1.5vw,12px);color:#8ea2ff;letter-spacing:.14em;
+  text-align:left;margin:clamp(6px,1.5vw,12px) 0 clamp(2px,.6vw,5px);opacity:.85}
 .coin{color:#ffe14d;animation:blink 1.15s steps(2) infinite;
   text-shadow:0 0 10px rgba(255,225,77,.7)}
 .maj{position:fixed;left:12px;bottom:10px;z-index:12;font-size:8px;color:#5b6aa0}
@@ -316,21 +325,79 @@ function cell(cls, txt, scr){
   if(scr) scramble(s, txt); else s.textContent = txt;
   return s;
 }
+/* ══ HALL OF FAME : sépare finisseurs (stamps===totalDefis) et grimpeurs ══
+   Le serveur trie déjà par score ; on ne fait que scinder la liste reçue.
+   splitGroups() est la SOURCE UNIQUE utilisée par render() ET la pagination,
+   pour que le nombre de pages porte bien sur la Course seule. */
+function splitGroups(){
+  var all = (DATA && DATA.players) ? DATA.players : [];
+  var td = DATA ? DATA.totalDefis : 0;
+  var champions = [], racers = [];
+  all.forEach(function(p){
+    if(td > 0 && p.stamps >= td) champions.push(p); else racers.push(p);
+  });
+  return { champions: champions, racers: racers };
+}
+/* mélange (Fisher-Yates) — copie, ne modifie pas l'original.
+   CROCHET PROPOSITION 2 : pour départager les champions par score de jeu,
+   remplacer l'appel shuffle() par un tri sur un futur champ p.gameScore. */
+function shuffle(arr){
+  var a = arr.slice();
+  for(var i = a.length - 1; i > 0; i--){
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+/* nb de pages de la COURSE (grimpeurs uniquement) */
+function racerPages(){
+  return Math.max(1, Math.ceil(splitGroups().racers.length / PAGE_SIZE));
+}
 function render(){
   var b = $('#board'); b.innerHTML = '';
   if(!DATA || !DATA.players.length){
     b.innerHTML = '<p class="empty gtx">AUCUN VOYAGEUR EN MER<br>— À VOS TAMPONS —</p>';
     $('#pager').hidden = true; return;
   }
+  var G = splitGroups();
+
+  /* ── HALL OF FAME (finisseurs, ordre aléatoire qui tourne) ── */
+  if(G.champions.length){
+    var hof = document.createElement('div'); hof.className = 'hof';
+    var hoftitle = document.createElement('div'); hoftitle.className = 'hoftitle gtx';
+    hoftitle.textContent = '★ HALL OF FAME · 100% ★';
+    hof.appendChild(hoftitle);
+    shuffle(G.champions).forEach(function(p, j){
+      var row = document.createElement('div'); row.className = 'row hofrow';
+      var n = cell('n', (p.name || 'VOYAGEUR').toUpperCase().slice(0, 14), true);
+      if(p.themes && p.themes.length){
+        var sv = document.createElement('span'); sv.className = 'souv';
+        sv.textContent = p.themes.map(function(t){ return SOUV[t] || ''; }).join('');
+        n.appendChild(sv);
+      }
+      row.appendChild(n);
+      hof.appendChild(row);
+      if(window.gsap && !reduce)
+        gsap.from(row, {opacity:0, scale:.94, duration:.35, delay:j * .05, ease:'power2.out'});
+    });
+    b.appendChild(hof);
+  }
+
+  /* ── LA COURSE (grimpeurs, classement paginé) ── */
   var head = document.createElement('div');
   head.className = 'row head';
   ['RANG','VOYAGEUR','TAMP.','SCORE'].forEach(function(t,i){
     var s = document.createElement('span');
     s.className = ['r','n','t','s'][i]; s.textContent = t; head.appendChild(s);
   });
-  b.appendChild(head);
+  if(G.racers.length){
+    var course = document.createElement('div'); course.className = 'coursetitle gtx';
+    course.textContent = G.champions.length ? 'LA COURSE' : '';
+    if(G.champions.length) b.appendChild(course);
+    b.appendChild(head);
+  }
   var start = page * PAGE_SIZE;
-  DATA.players.slice(start, start + PAGE_SIZE).forEach(function(p, j){
+  G.racers.slice(start, start + PAGE_SIZE).forEach(function(p, j){
     var row = document.createElement('div'); row.className = 'row';
     row.appendChild(cell('r', ordinal(start + j), true));
     var n = cell('n', (p.name || 'VOYAGEUR').toUpperCase().slice(0, 14), true);
@@ -346,7 +413,7 @@ function render(){
     if(window.gsap && !reduce)
       gsap.from(row, {opacity:0, y:14, duration:.3, delay:j * .04, ease:'power2.out'});
   });
-  var pages = Math.ceil(DATA.players.length / PAGE_SIZE);
+  var pages = racerPages();
   $('#pager').hidden = pages < 2;
   $('#pg').textContent = (page + 1) + '/' + pages;
   $('#prev').disabled = page === 0;
@@ -379,7 +446,7 @@ function armAuto(pages){
 }
 $('#prev').addEventListener('click', function(){ if(page > 0) go(page - 1, true); });
 $('#next').addEventListener('click', function(){
-  var pages = DATA ? Math.ceil(DATA.players.length / PAGE_SIZE) : 1;
+  var pages = DATA ? racerPages() : 1;
   if(page < pages - 1) go(page + 1, true);
 });
 document.addEventListener('keydown', function(e){
@@ -402,7 +469,7 @@ function load(){
     })
     .then(function(d){
       DATA = d;
-      var pages = Math.max(1, Math.ceil(d.players.length / PAGE_SIZE));
+      var pages = racerPages();
       if(page >= pages) page = 0;
       render();
     })
