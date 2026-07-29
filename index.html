@@ -593,6 +593,8 @@ input,textarea{font-size:max(16px,1rem)} /* évite le zoom auto iOS au focus */
 .tm-nom{font-weight:800;font-size:.92rem;line-height:1.15}
 .tm-role{font-size:.78rem;color:var(--ink-soft);margin-top:3px}
 .about-mention{font:700 .74rem 'Space Mono',monospace;color:var(--ink-soft);margin-top:14px;line-height:1.6}
+.about-version{font:700 .68rem 'Space Mono',monospace;color:var(--ink-soft);opacity:.55;
+  text-align:center;margin-top:10px;letter-spacing:.06em}
 
 .pp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .pp-head .pp-t{font:700 .72rem 'Space Mono',monospace;letter-spacing:.16em;color:var(--ink-soft)}
@@ -2598,6 +2600,25 @@ function openResources(){ renderResources(); $('#resourcesView').classList.add('
 });
 $('#resBack').onclick=()=>$('#resourcesView').classList.remove('open');
 
+/* --- Version applicative ---------------------------------------------------
+   Lue depuis le nom du cache du service worker (`caches.open(VERSION)` dans
+   sw.js nomme le cache « cv-ia-vNN »). sw.js reste donc la SEULE source de
+   vérité : rien à maintenir en double, la version affichée est toujours celle
+   qui tourne réellement. Silencieux si aucun SW n'est installé (première
+   visite, navigation privée) : on n'affiche alors rien plutôt qu'un faux. */
+let APP_VER = '';
+(async function readAppVersion(){
+  try{
+    if(!('caches' in window)) return;
+    const keys = await caches.keys();
+    const nums = keys.map(k=>{ const m=/^cv-ia-v(\d+)$/.exec(k); return m ? +m[1] : null; })
+                     .filter(n=>n!==null);
+    /* le SW purge les anciens caches à l'activation : normalement une seule
+       entrée. Le max couvre la brève fenêtre où deux versions coexistent. */
+    if(nums.length) APP_VER = '0.' + Math.max.apply(null, nums);
+  }catch(e){ /* pas de version affichée, sans conséquence */ }
+})();
+
 /* --- À propos : contenu piloté par config.js (ABOUT) --- */
 function openAbout(){
   const A=(window.CV_CONFIG && window.CV_CONFIG.ABOUT) || {};
@@ -2612,7 +2633,8 @@ function openAbout(){
     ${A.MENTION?'<p class="about-mention">'+A.MENTION+'</p>':''}
     <div class="foot" style="justify-content:center;margin-top:18px">
       <button class="btn btn-ghost" id="closeAbout">Fermer</button>
-    </div>`;
+    </div>
+    ${APP_VER ? '<p class="about-version">v'+APP_VER+'</p>' : ''}`;
   $('#onboarding').classList.add('open');
   $('#closeAbout').onclick=()=>$('#onboarding').classList.remove('open');
 }
