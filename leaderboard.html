@@ -130,6 +130,34 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
   padding:9px 11px;text-shadow:0 0 8px rgba(127,227,160,.6)}
 .mbtn[hidden]{display:none}
 
+/* ── bilan de l'été : tableau arcade, quelques lignes ── */
+.bilan{width:min(720px,94vw);margin:clamp(8px,3vh,28px) auto 0;display:flex;flex-direction:column;
+  gap:clamp(8px,2.2vh,18px)}
+.bilan .bt{font-size:clamp(10px,2.3vw,20px);text-align:center;letter-spacing:.12em;
+  margin-bottom:clamp(4px,1.5vh,14px);filter:drop-shadow(0 0 6px rgba(255,180,40,.5))}
+.stl{display:grid;grid-template-columns:auto minmax(2ch,1fr) auto;gap:1.2ch;align-items:baseline;
+  font-size:clamp(9px,2vw,18px);line-height:1.4}
+.stl .lb{color:#8ea2ff;text-shadow:0 2px 0 #000}
+.stl .ld{overflow:hidden;white-space:nowrap;color:rgba(142,162,255,.35)}
+.stl .vl{text-align:right;white-space:nowrap}
+.stl .souv{font-family:system-ui;font-size:.9em;margin:0 .35ch 0 .9ch}
+.stwait{margin-top:clamp(6px,2vh,16px);text-align:center;font-size:clamp(8px,1.6vw,13px);line-height:1.8}
+
+/* ── générique : défilement vertical façon « staff roll » ── */
+.staff{width:min(720px,94vw);height:min(58vh,560px);margin:clamp(6px,2vh,18px) auto 0;
+  position:relative;overflow:hidden;
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 14%,#000 86%,transparent 100%);
+          mask-image:linear-gradient(180deg,transparent 0,#000 14%,#000 86%,transparent 100%)}
+.staff.static{overflow-y:auto;-webkit-mask-image:none;mask-image:none}
+.roll{position:absolute;left:0;right:0;top:0;text-align:center;display:flex;flex-direction:column;
+  gap:clamp(18px,4vh,36px)}
+.staff.static .roll{position:static}
+.cr .role{font-size:clamp(7px,1.4vw,11px);color:#8ea2ff;letter-spacing:.14em;
+  text-shadow:0 2px 0 #000;margin-bottom:clamp(6px,1.2vh,10px)}
+.cr .who{font-size:clamp(9px,2vw,17px);line-height:1.8}
+.cr.head .who{font-size:clamp(10px,2.3vw,20px);letter-spacing:.12em}
+.cr.end .who{font-size:clamp(11px,2.6vw,22px)}
+
 /* accès refusé */
 .denied{color:#ff3b30;font-size:clamp(11px,3vw,24px);text-align:center;line-height:2;
   text-shadow:0 2px 0 #000, 0 0 14px rgba(255,59,48,.6);animation:blink 1s steps(2) infinite}
@@ -168,7 +196,20 @@ var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 var $ = function(s){ return document.querySelector(s); };
 var K = new URLSearchParams(location.search).get('k') || '';
 var SOUV = {1:'🐚',2:'⚓',3:'🐋',4:'🏆'};
-var PAGE_SIZE = 10, AUTO_MS = 8000;
+var PAGE_SIZE = 10, AUTO_MS = 8000, HOF_PER = 12;  /* HOF : 3 colonnes × 4 lignes */
+var BILAN_MS = 9000, STAFF_MS = 14000, STAFF_SPEED = 50, STAFF_HOLD = 2600;
+
+/* ══ GÉNÉRIQUE ══
+   Un bloc par rôle, les noms dans l'ordre d'affichage. Les majuscules sont appliquées
+   automatiquement. Ajouter ou retirer des blocs librement : la durée s'adapte. */
+var CREDITS = [
+  {role:'CONCEPTION PRODUIT & DESIGN', names:['Tarik', 'Virginie']},
+  {role:'DÉVELOPPEMENT',               names:['Claude', 'Tarik']},
+  {role:'DÉFIS & CONTENUS',            names:['Patrick', 'Matthieu', 'Tarik', 'Gertrude', 'Eric']},
+  {role:'COORDINATION',                names:['Gertrude']},
+  {role:'RECETTE',                     names:['Claude', 'Tarik', 'Virginia']},
+  {role:'SPONSOR',                     names:['Sophie']}
+];
 
 /* ══════════ 1. AUDIO - entièrement optionnel, échec silencieux ══════════ */
 function mkAudio(src){
@@ -315,6 +356,7 @@ function startSlideshow(urls){
 
 /* ══════════ 4. DONNÉES + RENDU ══════════ */
 var DATA = null, page = 0, hofPage = 0, autoT = null, pauseUntil = 0;
+var hofOrder = [], hofSig = '';
 
 function ordinal(i){ return i === 0 ? '1ER' : (i + 1) + 'E'; }
 function scramble(el, finalText){
@@ -368,12 +410,7 @@ function shuffle(arr){
 function racerPages(){
   return Math.max(1, Math.ceil(splitGroups().racers.length / PAGE_SIZE));
 }
-function render(){
-  var b = $('#board'); b.innerHTML = '';
-  if(!DATA || !DATA.players.length){
-    b.innerHTML = '<p class="empty gtx">AUCUN VOYAGEUR EN MER<br>— À VOS TAMPONS —</p>';
-    $('#pager').hidden = true; return;
-  }
+function renderScores(b){
   var G = splitGroups();
 
   /* ── HALL OF FAME (finisseurs, 3 colonnes, pagination interne du bloc) ── */
@@ -382,10 +419,11 @@ function render(){
     var hoftitle = document.createElement('div'); hoftitle.className = 'hoftitle gtx';
     hoftitle.textContent = '★ HALL OF FAME · 100% ★';
     hof.appendChild(hoftitle);
-    /* ordre aléatoire figé pour la session (ne re-mélange pas à chaque page interne) */
-    if(!DATA._hofOrder) DATA._hofOrder = shuffle(G.champions);
-    var champs = DATA._hofOrder;
-    var HOF_PER = 12;                       /* 3 colonnes × 4 lignes par page interne */
+    /* ordre aléatoire figé tant que la liste des champions ne change pas :
+       il survit au rafraîchissement de la minute (plus de saut d'une page à l'autre) */
+    var sig = G.champions.map(function(p){ return p.name + '|' + p.score; }).sort().join(',');
+    if(sig !== hofSig){ hofOrder = shuffle(G.champions); hofSig = sig; }
+    var champs = hofOrder;
     var hofPages = Math.max(1, Math.ceil(champs.length / HOF_PER));
     if(hofPage >= hofPages) hofPage = 0;
     var hstart = hofPage * HOF_PER;
@@ -450,17 +488,133 @@ function render(){
     if(window.gsap && !reduce)
       gsap.from(row, {opacity:0, y:14, duration:.3, delay:j * .04, ease:'power2.out'});
   });
-  var pages = racerPages();
-  $('#pager').hidden = pages < 2;
-  $('#pg').textContent = (page + 1) + '/' + pages;
+}
+
+/* ══ SÉQUENCE D'ÉCRANS : pages de score → bilan → générique, en boucle ══
+   Sans aucun score (recette, ouverture de campagne) : bilan → générique. */
+var END_SCREENS = ['bilan', 'staff'];
+function hasScores(){ return !!(DATA && DATA.players && DATA.players.length); }
+function scorePages(){ return hasScores() ? racerPages() : 0; }
+function totalScreens(){ return scorePages() + END_SCREENS.length; }
+function screenKind(p){ var n = scorePages(); return p < n ? 'score' : END_SCREENS[p - n]; }
+function hofPagesCount(){ return Math.max(1, Math.ceil(splitGroups().champions.length / HOF_PER)); }
+
+/* ══ BILAN DE L'ÉTÉ : tableau arcade, succinct (le défilement est continu) ══ */
+function pad4(n){ n = Math.max(0, n | 0); return n >= 10000 ? String(n) : ('000' + n).slice(-4); }
+function statLine(parent, label, value, node){
+  var l = document.createElement('div'); l.className = 'stl';
+  var a = document.createElement('span'); a.className = 'lb'; a.textContent = label;
+  var d = document.createElement('span'); d.className = 'ld'; d.textContent = new Array(90).join('.');
+  l.appendChild(a); l.appendChild(d);
+  if(node){ var v = document.createElement('span'); v.className = 'vl'; v.appendChild(node); l.appendChild(v); }
+  else l.appendChild(cell('vl', value, true));
+  parent.appendChild(l);
+  return l;
+}
+function renderBilan(b){
+  var G = splitGroups(), vide = !hasScores();
+  var w = document.createElement('div'); w.className = 'bilan';
+  var t = document.createElement('div'); t.className = 'bt gtx';
+  t.textContent = '★ BILAN DE L\'ÉTÉ ★';
+  w.appendChild(t);
+  var lines = [];
+  /* parties lancées = lignes de l'onglet etats (accès ayant enregistré une partie).
+     Ligne absente tant que le serveur ne fournit pas totalStarts : déploiement dans
+     n'importe quel ordre, sans casse. */
+  if(typeof DATA.totalStarts === 'number')
+    lines.push(statLine(w, 'PARTIES LANCÉES', pad4(DATA.totalStarts)));
+  lines = lines.concat([
+    statLine(w, 'VOYAGEURS',    pad4(DATA.totalPlayers)),
+    statLine(w, 'TAMPONS',      pad4(DATA.totalStamps)),
+    statLine(w, 'THÈMES',       pad4(DATA.totalThemes)),
+    statLine(w, 'HALL OF FAME', pad4(G.champions.length))
+  ]);
+  if(!vide){
+    /* souvenirs : nombre de voyageurs ayant bouclé chaque escale */
+    var par = {1:0, 2:0, 3:0, 4:0};
+    DATA.players.forEach(function(p){
+      (p.themes || []).forEach(function(n){ if(par[n] !== undefined) par[n]++; });
+    });
+    var frag = document.createElement('span');
+    [1, 2, 3, 4].forEach(function(n){
+      var ic = document.createElement('span'); ic.className = 'souv'; ic.textContent = SOUV[n];
+      var nb = document.createElement('span'); nb.className = 'gtx'; nb.textContent = String(par[n]);
+      frag.appendChild(ic); frag.appendChild(nb);
+    });
+    lines.push(statLine(w, 'SOUVENIRS', null, frag));
+  } else {
+    var wait = document.createElement('p'); wait.className = 'stwait coin';
+    wait.textContent = 'AUCUN VOYAGEUR EN MER · À VOS TAMPONS';
+    w.appendChild(wait);
+  }
+  b.appendChild(w);
+  if(window.gsap && !reduce)
+    lines.forEach(function(l, j){
+      gsap.from(l, {opacity:0, x:-18, duration:.35, delay:.15 + j * .12, ease:'power2.out'});
+    });
+  return BILAN_MS;
+}
+
+/* ══ GÉNÉRIQUE : défilement vertical, se termine sur « MERCI D'AVOIR JOUÉ » centré ══ */
+function renderStaff(b){
+  var box = document.createElement('div'); box.className = 'staff';
+  var roll = document.createElement('div'); roll.className = 'roll';
+  function block(role, names, cls){
+    var c = document.createElement('div'); c.className = 'cr' + (cls ? ' ' + cls : '');
+    if(role){
+      var r = document.createElement('div'); r.className = 'role'; r.textContent = role;
+      c.appendChild(r);
+    }
+    names.forEach(function(n){
+      var w = document.createElement('div'); w.className = 'who gtx';
+      w.textContent = String(n).toUpperCase();
+      c.appendChild(w);
+    });
+    roll.appendChild(c);
+    return c;
+  }
+  block('', ['★ STAFF ★'], 'head');
+  CREDITS.forEach(function(c){ block(c.role, c.names || []); });
+  var nb = DATA ? DATA.totalPlayers : 0;
+  if(nb > 0) block('AVEC', ['LES ' + nb + ' VOYAGEURS DE L\'ÉTÉ']);
+  var last = block('', ['MERCI D\'AVOIR JOUÉ'], 'end');
+  box.appendChild(roll); b.appendChild(box);
+
+  if(!window.gsap || reduce){ box.classList.add('static'); return STAFF_MS; }
+  var H = box.clientHeight;
+  var target = H / 2 - (last.offsetTop + last.offsetHeight / 2);  /* dernière ligne centrée */
+  var dur = Math.min(40, Math.max(8, (H - target) / STAFF_SPEED));
+  gsap.fromTo(roll, {y:H}, {y:target, duration:dur, ease:'none'});
+  return Math.round(dur * 1000) + STAFF_HOLD;
+}
+
+/* ══ ORCHESTRATION : un écran à la fois, chacun avec sa durée ══ */
+function render(){
+  var b = $('#board');
+  if(window.gsap) gsap.killTweensOf('.roll');
+  b.innerHTML = '';
+  if(!DATA) return;
+  var total = totalScreens();
+  if(page >= total) page = 0;
+  var kind = screenKind(page), ms = AUTO_MS;
+  if(kind === 'bilan') ms = renderBilan(b);
+  else if(kind === 'staff') ms = renderStaff(b);
+  else renderScores(b);
+
+  $('#pager').hidden = total < 2;
+  $('#pg').textContent = kind === 'bilan' ? 'BILAN'
+                       : kind === 'staff' ? 'STAFF'
+                       : (page + 1) + '/' + scorePages();
   $('#prev').disabled = page === 0;
-  $('#next').disabled = page >= pages - 1;
-  armAuto(pages);
-  $('#ft').innerHTML =
-    'VOYAGEURS <b>' + DATA.totalPlayers + '</b> · ' +
-    'TAMPONS ÉQUIPE <b>' + DATA.totalStamps + '</b> · ' +
-    'THÈMES <b>' + DATA.totalThemes + '</b>' +
-    '<span class="coin" style="flex-basis:100%">INSERT COIN · 24 SEPT</span>';
+  $('#next').disabled = page >= total - 1;
+  armAuto(ms);
+
+  var coin = '<span class="coin" style="flex-basis:100%">INSERT COIN · 24 SEPT</span>';
+  $('#ft').innerHTML = kind === 'score'
+    ? 'VOYAGEURS <b>' + DATA.totalPlayers + '</b> · ' +
+      'TAMPONS ÉQUIPE <b>' + DATA.totalStamps + '</b> · ' +
+      'THÈMES <b>' + DATA.totalThemes + '</b>' + coin
+    : coin;                                   /* bilan et générique : pas de doublon des totaux */
   $('#maj').textContent = 'MAJ ' + new Date().toLocaleTimeString('fr-FR',
     {hour:'2-digit', minute:'2-digit'});
 }
@@ -469,22 +623,24 @@ function go(p, manual){
   if(manual) pauseUntil = Date.now() + 20000;   /* on laisse lire */
   render();
 }
-function armAuto(pages){
+/* défilement continu : le Hall of Fame tourne avec les pages de score,
+   pour que chaque champion passe à l'écran sans intervention */
+function armAuto(ms){
   clearTimeout(autoT);
   if(window.gsap && !reduce){
     gsap.killTweensOf('#prog');
-    gsap.fromTo('#prog', {width:0}, {width:'100%', duration:AUTO_MS/1000, ease:'none'});
+    gsap.fromTo('#prog', {width:0}, {width:'100%', duration:ms / 1000, ease:'none'});
   }
-  if(pages < 2) return;
   autoT = setTimeout(function tick(){
     if(Date.now() < pauseUntil){ autoT = setTimeout(tick, 1000); return; }
-    go((page + 1) % pages, false);
-  }, AUTO_MS);
+    var next = (page + 1) % totalScreens();
+    if(screenKind(next) === 'score') hofPage = (hofPage + 1) % hofPagesCount();
+    go(next, false);
+  }, ms);
 }
 $('#prev').addEventListener('click', function(){ if(page > 0) go(page - 1, true); });
 $('#next').addEventListener('click', function(){
-  var pages = DATA ? racerPages() : 1;
-  if(page < pages - 1) go(page + 1, true);
+  if(DATA && page < totalScreens() - 1) go(page + 1, true);
 });
 document.addEventListener('keydown', function(e){
   if(e.key === 'ArrowLeft') $('#prev').click();
@@ -505,9 +661,15 @@ function load(){
       return r.json();
     })
     .then(function(d){
+      var avant = DATA ? screenKind(page) : 'score';
       DATA = d;
-      var pages = racerPages();
-      if(page >= pages) page = 0;
+      if(avant !== 'score'){
+        /* bilan ou générique en cours : on ne l'interrompt pas, l'écran suivant
+           prendra les données fraîches ; l'index est recalé si le nombre de pages a changé */
+        page = scorePages() + END_SCREENS.indexOf(avant);
+        return;
+      }
+      if(page >= totalScreens()) page = 0;
       render();
     })
     .catch(function(e){
