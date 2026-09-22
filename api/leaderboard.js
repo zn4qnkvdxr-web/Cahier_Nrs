@@ -147,7 +147,7 @@ module.exports = async (req, res) => {
     totalPlayers: players.length,
     totalStamps: players.reduce((s, p) => s + p.stamps, 0),
     totalThemes: players.reduce((s, p) => s + p.themes.length, 0),
-    players: players.slice(0, 100).map(({ name, score, stamps, themes }) => ({ name, score, stamps, themes })),
+    players: players.map(({ name, score, stamps, themes }) => ({ name, score, stamps, themes })),
   };
   cache = { t: Date.now(), body };
   return res.status(200).json(body);
