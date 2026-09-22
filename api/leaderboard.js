@@ -145,6 +145,7 @@ module.exports = async (req, res) => {
     generated: new Date().toISOString(),
     totalDefis: Object.keys(byId).length,
     totalPlayers: players.length,
+    totalStarts: rows.length,              // parties lancées : lignes de l'onglet etats
     totalStamps: players.reduce((s, p) => s + p.stamps, 0),
     totalThemes: players.reduce((s, p) => s + p.themes.length, 0),
     players: players.map(({ name, score, stamps, themes }) => ({ name, score, stamps, themes })),
