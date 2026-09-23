@@ -199,6 +199,12 @@ var SOUV = {1:'🐚',2:'⚓',3:'🐋',4:'🏆'};
 var PAGE_SIZE = 10, AUTO_MS = 8000, HOF_PER = 12;  /* HOF : 3 colonnes × 4 lignes */
 var BILAN_MS = 9000, STAFF_MS = 14000, STAFF_SPEED = 50, STAFF_HOLD = 2600;
 
+/* ══ POINT DE CADRAGE DES BANNIÈRES ══
+   Position horizontale du sujet, en % de la largeur de l'image (numéro de bannière → %).
+   Sans effet sur un écran 16:9 ; sur tablette et téléphone, le recadrage suit le sujet
+   au lieu de rester centré. Bannière absente de la liste = cadrage centré. */
+var BANNER_FOCUS = {2: 70, 3: 56, 5: 72, 6: 66};
+
 /* ══ GÉNÉRIQUE ══
    Un bloc par rôle, les noms dans l'ordre d'affichage. Les majuscules sont appliquées
    automatiquement. Ajouter ou retirer des blocs librement : la durée s'adapte. */
@@ -333,9 +339,11 @@ function probeBanners(){
 function startSlideshow(urls){
   var bg = $('#bg');
   if(!urls.length) return;                       /* 0 : fond CSS par défaut */
-  var imgs = urls.map(function(u){
+  var imgs = urls.map(function(u, i){
     var im = document.createElement('img');
     im.src = u; im.alt = '';
+    var fx = BANNER_FOCUS[i + 1];                  /* numéro de bannière = rang + 1 */
+    if(typeof fx === 'number') im.style.objectPosition = fx + '% 50%';
     bg.insertBefore(im, bg.firstChild);
     return im;
   });
