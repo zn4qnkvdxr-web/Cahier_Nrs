@@ -16,8 +16,8 @@
    Assets optionnels (tout fonctionne sans eux) :
    · Diaporama  : content/img/scoreboard-banner-1.jpg, -2.jpg, …
                   format recommandé 16:9, .jpg ou .png, < 400 Ko
-   · Audio      : sounds/intro-sound-1.mp3, sounds/intro-sound-2.mp3,
-                  sounds/background-music.mp3 (boucle)
+   · Audio      : sounds/background-music.mp3 (boucle)
+   · Logos      : content/img/credit-logo-1.png, -2.png, -3.png (0 à 3, fin du générique)
    ═══════════════════════════════════════════════════════════════════ */
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
@@ -44,11 +44,6 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 @keyframes flick{0%,100%{opacity:1}50%{opacity:.965}}
 .crt{animation:flick .12s steps(1) infinite}
 @media(prefers-reduced-motion:reduce){.crt{animation:none}}
-
-/* ── Allumage TV ── */
-.boot{position:fixed;inset:0;z-index:60;background:#000;display:grid;place-items:center}
-.boot .beam{width:0;height:3px;background:#fff;border-radius:2px;
-  box-shadow:0 0 18px 4px #cfe9ff, 0 0 60px 10px rgba(150,200,255,.7)}
 
 /* ── UI ── */
 .ui{position:relative;z-index:10;min-height:100%;box-sizing:border-box;
@@ -157,6 +152,11 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 .cr .who{font-size:clamp(9px,2vw,17px);line-height:1.8}
 .cr.head .who{font-size:clamp(10px,2.3vw,20px);letter-spacing:.12em}
 .cr.end .who{font-size:clamp(11px,2.6vw,22px)}
+.staff .merci{position:absolute;left:0;right:0;top:0;text-align:center}
+.staff.static .merci{position:static;margin-top:clamp(18px,4vh,36px)}
+.logos{display:flex;justify-content:center;align-items:center;gap:clamp(14px,4vw,40px);
+  height:clamp(36px,8vh,72px)}                 /* hauteur fixe : mesure fiable avant chargement */
+.logos img{max-height:100%;max-width:28%;width:auto;height:auto;object-fit:contain}
 
 /* accès refusé */
 .denied{color:#ff3b30;font-size:clamp(11px,3vw,24px);text-align:center;line-height:2;
@@ -185,7 +185,6 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 
 <button class="mbtn" id="musicBtn" hidden>♪ PLAY</button>
 <div class="crt" aria-hidden="true"></div>
-<div class="boot" id="boot" aria-hidden="true"><i class="beam" id="beam"></i></div>
 <p class="maj" id="maj"></p>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -197,13 +196,13 @@ var $ = function(s){ return document.querySelector(s); };
 var K = new URLSearchParams(location.search).get('k') || '';
 var SOUV = {1:'🐚',2:'⚓',3:'🐋',4:'🏆'};
 var PAGE_SIZE = 10, AUTO_MS = 8000, HOF_PER = 12;  /* HOF : 3 colonnes × 4 lignes */
-var BILAN_MS = 9000, STAFF_MS = 14000, STAFF_SPEED = 50, STAFF_HOLD = 2600;
+var BILAN_MS = 9000, STAFF_MS = 14000, STAFF_SPEED = 50, STAFF_HOLD = 3500;
 
 /* ══ POINT DE CADRAGE DES BANNIÈRES ══
    Position horizontale du sujet, en % de la largeur de l'image (numéro de bannière → %).
    Sans effet sur un écran 16:9 ; sur tablette et téléphone, le recadrage suit le sujet
    au lieu de rester centré. Bannière absente de la liste = cadrage centré. */
-var BANNER_FOCUS = {2: 70, 3: 56, 5: 72, 6: 66};
+var BANNER_FOCUS = {2: 70, 3: 56};   /* 2 Chef Vinny · 3 Soline — les autres sont centrées */
 
 /* ══ GÉNÉRIQUE ══
    Un bloc par rôle, les noms dans l'ordre d'affichage. Les majuscules sont appliquées
@@ -230,20 +229,17 @@ function mkAudio(src){
   a.src = src;
   return a;
 }
-/* joue et résout à la fin - résout immédiatement si 404/autoplay bloqué */
-function playThrough(a){
-  return a._ok.then(function(ok){
-    if(!ok) return;
-    return new Promise(function(res){
-      a.addEventListener('ended', function(){ res(); }, {once:true});
-      var p = a.play();
-      if(p && p.catch) p.catch(function(){ res(); });
-    });
-  }).catch(function(){});
-}
-var sIntro1 = mkAudio('sounds/intro-sound-1.mp3');
-var sIntro2 = mkAudio('sounds/intro-sound-2.mp3');
-var music   = mkAudio('sounds/background-music.mp3');
+var music = mkAudio('sounds/background-music.mp3');
+/* Musique disponible ? On ne dépend pas du préchargement : iOS n'en fait aucun avant
+   un geste de l'utilisateur, et le bouton ne s'affichait jamais sur mobile. Une simple
+   requête HEAD suffit à savoir si le fichier existe. */
+var musicAvail = new Promise(function(res){
+  music._ok.then(function(ok){ if(ok) res(true); });
+  if(window.fetch)
+    fetch('sounds/background-music.mp3', {method:'HEAD', cache:'no-store'})
+      .then(function(r){ res(r.ok); }).catch(function(){ /* on s'en remet au préchargement */ });
+  setTimeout(function(){ res(false); }, 8000);
+});
 
 /* Boucle musicale à fondu : fade-in au départ, fade-out avant la fin,
    redémarrage enchaîné en fade-in (jamais de coupure sèche). */
@@ -257,18 +253,20 @@ function fadeTo(target, dur, then){
       onComplete:function(){ fading=false; if(then) then(); }});
   } else { music.volume = target; fading=false; if(then) then(); }
 }
-function startMusic(){
-  music._ok.then(function(ok){
-    if(!ok || userStopped || musicOn) return;
-    music.volume = 0;
-    var p = music.play();
-    if(p && p.catch) p.catch(function(){ return; });
-    p && p.then && p.then(function(){
-      musicOn = true; setBtn();
-      fadeTo(VOL, FADE);
-    });
-  }).catch(function(){});
+var starting = false;
+/* play() est appelé directement dans le geste de l'utilisateur quand il y en a un :
+   c'est ce qu'exige iOS (un appel différé dans une promesse peut être refusé). */
+function playNow(){
+  if(userStopped || musicOn || starting) return;
+  starting = true;
+  music.volume = 0;                         /* sans effet sur iOS : volume en lecture seule */
+  var p = music.play();
+  if(p && p.then) p.then(function(){
+    starting = false; musicOn = true; setBtn(); fadeTo(VOL, FADE);
+  }, function(){ starting = false; });      /* lecture auto refusée : on attend un geste */
+  else starting = false;
 }
+function startMusic(){ musicAvail.then(function(ok){ if(ok) playNow(); }); }
 music.addEventListener('timeupdate', function(){
   if(!musicOn || fading || !music.duration) return;
   if(music.duration - music.currentTime <= FADE + 0.08){
@@ -281,46 +279,26 @@ music.addEventListener('timeupdate', function(){
 });
 var btn = $('#musicBtn');
 function setBtn(){ btn.textContent = musicOn ? '♪ STOP' : '♪ PLAY'; }
-music._ok.then(function(ok){ if(ok){ btn.hidden = false; setBtn(); } });
+musicAvail.then(function(ok){ if(ok){ btn.hidden = false; setBtn(); } });
 btn.addEventListener('click', function(){
   if(musicOn){
     userStopped = true;
     fadeTo(0, 0.8, function(){ music.pause(); });
     musicOn = false; setBtn();
   } else {
-    userStopped = false; startMusic();
+    userStopped = false; playNow();
   }
 });
 /* l'autoplay est souvent bloqué avant un geste : premier tap = reprise douce */
 document.addEventListener('pointerdown', function(){
-  if(!musicOn && !userStopped) startMusic();
+  if(!musicOn && !userStopped) playNow();
 }, {once:false});
 
-/* ══════════ 2. ALLUMAGE CRT - une seule fois par session ══════════ */
-function crtOn(){
-  return new Promise(function(res){
-    var boot = $('#boot'), beam = $('#beam');
-    if(reduce || !window.gsap){ boot.remove(); res(); return; }
-    var tl = gsap.timeline({onComplete:function(){ boot.remove(); res(); }});
-    tl.to(beam, {width:'92vw', duration:.32, ease:'expo.out'})
-      .to(beam, {height:'100vh', opacity:0, duration:.5, ease:'power2.in'}, '+=.08')
-      .to(boot, {opacity:0, duration:.35, ease:'power1.out'}, '<.15')
-      .from('#ui', {opacity:0, duration:.4}, '<');
-  });
-}
-function bootSequence(){
-  if(sessionStorage.getItem('lb_boot')){       /* revisite dans la session */
-    $('#boot').remove();
-    startMusic();
-    return;
-  }
-  sessionStorage.setItem('lb_boot','1');
-  playThrough(sIntro1)                          /* 1. son d'intro (ou rien) */
-    .then(crtOn)                                /* 2. allumage TV, toujours */
-    .then(function(){ return playThrough(sIntro2); }) /* 3. second jingle */
-    .then(startMusic)                           /* 4. boucle de fond */
-    .catch(function(){ /* l'audio ne bloque jamais le visuel */ });
-}
+/* ══════════ 2. DÉMARRAGE — plus d'allumage d'écran ══════════
+   L'allumage attendait la fin du premier son d'intro : si ce son ne se terminait jamais
+   (onglet en arrière-plan, lecture suspendue), la page restait bloquée sur l'écran noir.
+   L'interface est désormais visible immédiatement ; la musique suit, sans rien bloquer. */
+function bootSequence(){ startMusic(); }
 
 /* ══════════ 3. DIAPORAMA - adaptatif 0 / 1 / N images ══════════ */
 /* Nomenclature : content/img/scoreboard-banner-1.jpg, -2.jpg, … (16:9) */
@@ -564,7 +542,24 @@ function renderBilan(b){
   return BILAN_MS;
 }
 
-/* ══ GÉNÉRIQUE : défilement vertical, se termine sur « MERCI D'AVOIR JOUÉ » centré ══ */
+/* ══ GÉNÉRIQUE ══
+   Tout le générique défile et sort par le haut. « MERCI D'AVOIR JOUÉ » le suit à la même
+   vitesse, s'arrête au centre et y reste seul avant la reprise du carrousel.
+   Logos facultatifs (0 à 3), juste avant la phrase : content/img/credit-logo-1.png … -3.png */
+var CREDIT_LOGOS = [];                            /* rempli au démarrage par probeLogos() */
+function probeLogos(){
+  var found = [], i = 1, MAX = 3;
+  return new Promise(function(res){
+    (function next(){
+      if(i > MAX) return res(found);
+      var url = 'content/img/credit-logo-' + i + '.png';
+      var im = new Image();
+      im.onload = function(){ found.push(url); i++; next(); };
+      im.onerror = function(){ res(found); };     /* premier trou = fin */
+      im.src = url;
+    })();
+  });
+}
 function renderStaff(b){
   var box = document.createElement('div'); box.className = 'staff';
   var roll = document.createElement('div'); roll.className = 'roll';
@@ -584,23 +579,34 @@ function renderStaff(b){
   }
   block('', ['★ STAFF ★'], 'head');
   CREDITS.forEach(function(c){ block(c.role, c.names || []); });
-  var nb = DATA ? DATA.totalPlayers : 0;
-  if(nb > 0) block('AVEC', ['LES ' + nb + ' VOYAGEURS DE L\'ÉTÉ']);
-  var last = block('', ['MERCI D\'AVOIR JOUÉ'], 'end');
-  box.appendChild(roll); b.appendChild(box);
+  if(CREDIT_LOGOS.length){
+    var lg = document.createElement('div'); lg.className = 'logos';
+    CREDIT_LOGOS.forEach(function(u){
+      var im = document.createElement('img'); im.src = u; im.alt = ''; lg.appendChild(im);
+    });
+    roll.appendChild(lg);
+  }
+  var merci = document.createElement('div'); merci.className = 'cr end merci';
+  var mw = document.createElement('div'); mw.className = 'who gtx';
+  mw.textContent = 'MERCI D\'AVOIR JOUÉ';
+  merci.appendChild(mw);
+  box.appendChild(roll); box.appendChild(merci); b.appendChild(box);
 
   if(!window.gsap || reduce){ box.classList.add('static'); return STAFF_MS; }
-  var H = box.clientHeight;
-  var target = H / 2 - (last.offsetTop + last.offsetHeight / 2);  /* dernière ligne centrée */
-  var dur = Math.min(40, Math.max(8, (H - target) / STAFF_SPEED));
-  gsap.fromTo(roll, {y:H}, {y:target, duration:dur, ease:'none'});
-  return Math.round(dur * 1000) + STAFF_HOLD;
+  var H = box.clientHeight, R = roll.offsetHeight, M = merci.offsetHeight;
+  var GAP = parseFloat(getComputedStyle(roll).rowGap) || 24;  /* même respiration qu'entre deux blocs */
+  var v = Math.max(STAFF_SPEED, (H + R) / 40);                /* 40 s au plus, même si la liste s'allonge */
+  var yStart = H + R + GAP, yEnd = (H - M) / 2;
+  var tRoll = (H + R) / v, tMerci = (yStart - yEnd) / v;
+  gsap.fromTo(roll,  {y:H},      {y:-R,   duration:tRoll,  ease:'none'});  /* sort entièrement */
+  gsap.fromTo(merci, {y:yStart}, {y:yEnd, duration:tMerci, ease:'none'});  /* s'arrête au centre */
+  return Math.round(Math.max(tRoll, tMerci) * 1000) + STAFF_HOLD;
 }
 
 /* ══ ORCHESTRATION : un écran à la fois, chacun avec sa durée ══ */
 function render(){
   var b = $('#board');
-  if(window.gsap) gsap.killTweensOf('.roll');
+  if(window.gsap) gsap.killTweensOf('.roll, .merci');
   b.innerHTML = '';
   if(!DATA) return;
   var total = totalScreens();
@@ -689,8 +695,9 @@ function load(){
 
 /* ══════════ Lancement ══════════ */
 window.addEventListener('load', function(){
-  bootSequence();          /* audio + allumage : jamais bloquant */
+  bootSequence();          /* musique : jamais bloquante */
   probeBanners().then(startSlideshow);
+  probeLogos().then(function(l){ CREDIT_LOGOS = l; });
   load();
   setInterval(load, 60000); /* LIVE : rafraîchi chaque minute */
 });
