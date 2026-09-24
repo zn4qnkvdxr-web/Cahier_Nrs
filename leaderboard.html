@@ -154,9 +154,14 @@ body{background:#04050c;color:#fff;font-family:'Press Start 2P',monospace;
 .cr.end .who{font-size:clamp(11px,2.6vw,22px)}
 .staff .merci{position:absolute;left:0;right:0;top:0;text-align:center}
 .staff.static .merci{position:static;margin-top:clamp(18px,4vh,36px)}
-.logos{display:flex;justify-content:center;align-items:center;gap:clamp(14px,4vw,40px);
-  height:clamp(36px,8vh,72px)}                 /* hauteur fixe : mesure fiable avant chargement */
-.logos img{max-height:100%;max-width:28%;width:auto;height:auto;object-fit:contain}
+/* logos : hauteur explicite, pour que la mesure du générique reste juste avant chargement.
+   Ordinateur : en ligne. Téléphone : empilés, sinon chacun tomberait à ~100 px de large. */
+.logos{display:flex;justify-content:center;align-items:center;gap:clamp(18px,4vw,44px)}
+.logos img{height:clamp(56px,11vh,110px);width:auto;max-width:30%;object-fit:contain}
+@media (max-width:560px){
+  .logos{flex-direction:column;gap:18px}
+  .logos img{height:72px;max-width:80%}
+}
 
 /* accès refusé */
 .denied{color:#ff3b30;font-size:clamp(11px,3vw,24px);text-align:center;line-height:2;
@@ -209,11 +214,11 @@ var BANNER_FOCUS = {2: 70, 3: 56};   /* 2 Chef Vinny · 3 Soline — les autres 
    automatiquement. Ajouter ou retirer des blocs librement : la durée s'adapte. */
 var CREDITS = [
   {role:'IDÉE', names:['Cecile', 'Patrick', 'Tarik', 'Matthieu', 'Gertrude', 'Virginie']},
-  {role:'CONCEPTION & PRODUCTION',     names:['Tarik']},
-  {role:'DÉFIS & CONTENUS',            names:['Tarik', 'Patrick', 'Virginie', 'Matthieu', 'Gertrude', 'Eric']},
+  {role:'CONCEPTION & DESIGN', names:['Tarik', 'Virginie']},
+  {role:'DÉVELOPPEMENT',               names:['Tarik', 'Claude']},
+  {role:'DÉFIS & CONTENUS',            names:['Tarik', 'Patrick', 'Matthieu', 'Gertrude', 'Eric']},
   {role:'COORDINATION',                names:['Gertrude']},
-  {role:'RECETTE',                     names:['Tarik', 'Virginia']},
-  {role:'OUTILS IA',                   names:['Claude', 'Gemini', 'Mistral', 'ChatGPT']},
+  {role:'RECETTE',                     names:['Tarik', 'Claude', 'Virginia']},
   {role:'SPONSOR',                     names:['Sophie']}
 ];
 
@@ -588,7 +593,7 @@ function renderStaff(b){
   }
   var merci = document.createElement('div'); merci.className = 'cr end merci';
   var mw = document.createElement('div'); mw.className = 'who gtx';
-  mw.textContent = 'MERCI D\'AVOIR PARTICIPÉ';
+  mw.textContent = 'MERCI D\'AVOIR JOUÉ';
   merci.appendChild(mw);
   box.appendChild(roll); box.appendChild(merci); b.appendChild(box);
 
